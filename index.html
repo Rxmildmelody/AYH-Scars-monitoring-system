@@ -507,7 +507,7 @@
                 const result = await res.json();
                 if(result.status === 'success') {
                     document.getElementById('addPatientForm').reset();
-                    toggleModal('addPatientModal');
+                    toggleModal('addPatientModal'); 
                     loadData(); 
                 }
             } catch (error) { alert("เกิดข้อผิดพลาด"); } finally { btn.innerHTML = 'บันทึกข้อมูล'; btn.disabled = false; }
