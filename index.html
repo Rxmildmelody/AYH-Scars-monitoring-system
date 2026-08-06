@@ -184,13 +184,19 @@
                     </div>
                 </div>
 
-                <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ -->
-                <div class="col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
-                    <div class="flex justify-between items-end border-b pb-3 mb-4">
-                        <h4 class="font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-mobile-screen-button text-blue-600"></i> ข้อมูลจากผู้ป่วย
-                        </h4>
-                    </div>
+               <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ -->
+<div class="col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+    <div class="flex justify-between items-end border-b pb-3 mb-4">
+        <h4 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-mobile-screen-button text-blue-600"></i> ข้อมูลจากผู้ป่วย
+        </h4>
+    </div>
+    
+    <!-- พื้นที่แสดงผลที่จะถูกควบคุมด้วย JavaScript -->
+    <div id="assessmentContent" class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+        <!-- ข้อมูลจะถูกสร้างที่นี่ -->
+    </div>
+</div>
                     
                     <!-- ส่วนแสดงวันที่ตอบ -->
                     <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4 flex items-center gap-3">
@@ -413,19 +419,59 @@
         }
         function changePage(newPage) { currentPage = newPage; renderTable(); }
 
-        function openDetails(rowDataStr) {
-            const data = JSON.parse(decodeURIComponent(rowDataStr));
-            document.getElementById('detailHN').innerText = "HN: " + data.hn;
-            document.getElementById('detailName').innerText = data.name;
-            document.getElementById('detailDrug').innerText = data.drug;
-            document.getElementById('detailDate').innerText = data.date;
-            document.getElementById('detailStatus').innerHTML = getStatusBadge(data.status);
-            document.getElementById('detailHistory').innerText = data.history;
+       function openDetails(rowDataStr) {
+    const data = JSON.parse(decodeURIComponent(rowDataStr));
+    document.getElementById('detailHN').innerText = "HN: " + data.hn;
+    document.getElementById('detailName').innerText = data.name;
+    document.getElementById('detailDrug').innerText = data.drug;
+    document.getElementById('detailDate').innerText = data.date;
+    document.getElementById('detailStatus').innerHTML = getStatusBadge(data.status);
+    document.getElementById('detailHistory').innerText = data.history || "-";
+    
+    const fullLiffUrl = encodeURIComponent(LIFF_URL_BASE + data.hn);
+    document.getElementById('detailQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fullLiffUrl}`;
+    
+    // 👇👇👇 เพิ่มโค้ดส่วนนี้เข้าไป 👇👇👇
+    const assessmentContent = document.getElementById('assessmentContent');
+    
+    if (data.status === 'รอตอบแบบประเมิน' || data.status === 'เลยกำหนด 24 ชม.') {
+        // กรณีที่ยังไม่ตอบ
+        assessmentContent.innerHTML = `
+            <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12 mt-10">
+                <i class="fa-regular fa-clock text-5xl mb-4 text-slate-200"></i>
+                <p class="text-sm font-medium">ผู้ป่วยยังไม่ได้ทำแบบประเมิน</p>
+                <p class="text-xs text-slate-400 mt-1">กรุณารอผู้ป่วยสแกน QR Code</p>
+            </div>
+        `;
+    } else {
+        // กรณีที่ตอบแล้ว (สถานะ: ลงทะเบียนแล้ว หรือ เสี่ยงสูง)
+        // (หมายเหตุ: ตอนนี้ทำ UI รองรับไว้ก่อน ในอนาคตถ้าต้องการให้โชว์ว่าติ๊กข้อไหนบ้างเป๊ะๆ ต้องเขียน Apps script ดึงจากชีต Assessments มาเพิ่มครับ)
+        assessmentContent.innerHTML = `
+            <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4 flex items-center gap-3">
+                <i class="fa-regular fa-calendar-check text-blue-500 text-xl"></i>
+                <div>
+                    <p class="text-xs text-slate-500">สถานะการตอบประเมิน:</p>
+                    <p class="text-sm font-bold text-slate-800">ตอบประเมินเรียบร้อยแล้ว</p>
+                </div>
+            </div>
             
-            // สร้าง QR Code สำหรับนำไปพิมพ์ A5
-            const fullLiffUrl = encodeURIComponent(LIFF_URL_BASE + data.hn);
-            document.getElementById('detailQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fullLiffUrl}`;
-            
+            <div class="p-4 rounded-lg border ${data.status === 'เสี่ยงสูง' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'} flex justify-between items-center shadow-sm">
+                <span class="${data.status === 'เสี่ยงสูง' ? 'text-red-700' : 'text-green-700'} font-bold text-sm">
+                    ผลลัพธ์: ${data.status}
+                </span>
+            </div>
+
+            <div class="mt-8">
+                <p class="text-xs font-bold text-slate-500 mb-2 uppercase text-center">ภาพถ่ายอาการ</p>
+                <div class="w-full h-40 bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400">
+                    <i class="fa-regular fa-image text-3xl mb-1"></i>
+                    <span class="text-xs">ไม่มีรูปภาพแนบ</span>
+                </div>
+            </div>
+        `;
+    }
+    // 👆👆👆 สิ้นสุดโค้ดที่ต้องเพิ่ม 👆👆👆
+       
             toggleModal('patientDetailsModal');
         }
 
