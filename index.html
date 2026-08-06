@@ -3,33 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - SCARs Monitoring</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #f8f9fa; }
-        .login-box { border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    </style>
+    <title>SCARs Monitoring System</title>
+    <!-- เรียกใช้ Tailwind CSS ผ่าน CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
-<body class="d-flex align-items-center justify-content-center vh-100">
+<body class="bg-slate-50 flex h-screen overflow-hidden font-sans">
 
-    <div class="card login-box p-4" style="width: 100%; max-width: 400px;">
-        <div class="text-center mb-4">
-            <h3 class="text-primary fw-bold">SCARs Monitoring</h3>
-            <p class="text-muted">ระบบติดตามอาการไม่พึงประสงค์จากยา</p>
+    <!-- Sidebar -->
+    <aside class="w-64 bg-[#1e3a8a] text-white flex flex-col">
+        <div class="p-6 flex items-center gap-3 border-b border-blue-800">
+            <i class="fa-solid fa-shield-halved text-2xl"></i>
+            <h1 class="font-bold text-lg leading-tight">SCARs<br><span class="text-xs font-normal">Monitoring System</span></h1>
         </div>
-        <form action="dashboard.html" method="GET">
-            <div class="mb-3">
-                <label class="form-label text-secondary fw-bold">Username</label>
-                <input type="text" class="form-control" placeholder="รหัสผู้ใช้งาน" required>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="#" class="flex items-center gap-3 px-4 py-3 bg-blue-700 rounded-lg text-sm font-medium">
+                <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-blue-800 rounded-lg text-sm">
+                <i class="fa-solid fa-users w-5"></i> ผู้ป่วย
+            </a>
+            <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-blue-800 rounded-lg text-sm">
+                <i class="fa-solid fa-clipboard-list w-5"></i> แบบประเมิน
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto">
+        <!-- Header -->
+        <header class="bg-white p-4 shadow-sm flex justify-between items-center">
+            <h2 class="text-xl font-bold text-slate-800">Dashboard (ภาพรวม)</h2>
+            <div class="flex items-center gap-4">
+                <i class="fa-regular fa-bell text-slate-500 text-xl cursor-pointer"></i>
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">M</div>
+                    <span class="text-sm font-medium text-slate-700">Mild Pharmacist</span>
+                </div>
             </div>
-            <div class="mb-4">
-                <label class="form-label text-secondary fw-bold">Password</label>
-                <input type="password" class="form-control" placeholder="รหัสผ่าน" required>
+        </header>
+
+        <!-- Content -->
+        <div class="p-6 space-y-6">
+            <!-- Stat Cards -->
+            <div class="grid grid-cols-4 gap-6">
+                <!-- Card 1 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-blue-600">
+                    <p class="text-sm text-slate-500 mb-1">ผู้ป่วยทั้งหมด</p>
+                    <div class="flex items-baseline gap-2">
+                        <h3 class="text-3xl font-bold text-slate-800">120</h3>
+                        <span class="text-sm text-slate-500">คน</span>
+                    </div>
+                </div>
+                <!-- Card 2 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-green-500">
+                    <p class="text-sm text-slate-500 mb-1">ลงทะเบียนแล้ว</p>
+                    <div class="flex items-baseline gap-2">
+                        <h3 class="text-3xl font-bold text-green-600">105</h3>
+                        <span class="text-sm text-slate-500">คน</span>
+                    </div>
+                </div>
+                <!-- Card 3 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-yellow-400">
+                    <p class="text-sm text-slate-500 mb-1">รอตอบแบบประเมิน</p>
+                    <div class="flex items-baseline gap-2">
+                        <h3 class="text-3xl font-bold text-yellow-500">12</h3>
+                        <span class="text-sm text-slate-500">คน</span>
+                    </div>
+                </div>
+                <!-- Card 4 -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 border-l-4 border-l-red-500">
+                    <p class="text-sm text-slate-500 mb-1">Risk Alert</p>
+                    <div class="flex items-baseline gap-2">
+                        <h3 class="text-3xl font-bold text-red-600">3</h3>
+                        <span class="text-sm text-slate-500">คน</span>
+                    </div>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100 fw-bold">Login</button>
-        </form>
-    </div>
+
+            <!-- Area for Charts / Tables (Placeholder) -->
+            <div class="grid grid-cols-3 gap-6">
+                <div class="col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-64 flex items-center justify-center text-slate-400">
+                    [ พื้นที่สำหรับใส่กราฟเส้น จำนวนผู้ป่วยรายเดือน ]
+                </div>
+                <div class="col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-64 flex items-center justify-center text-slate-400">
+                    [ พื้นที่สำหรับใส่กราฟโดนัท สถานะ ]
+                </div>
+            </div>
+        </div>
+    </main>
 
 </body>
 </html>
