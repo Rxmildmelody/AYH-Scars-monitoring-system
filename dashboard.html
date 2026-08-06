@@ -4,90 +4,250 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - SCARs Monitoring</title>
+    <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Google Fonts: Prompt -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
     <style>
-        body { font-family: 'Prompt', sans-serif; background-color: #ffffff; }
-        .stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .menu-btn { height: 100px; border-radius: 12px; font-size: 1.1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .menu-btn i { font-size: 2rem; margin-bottom: 8px; }
+        :root {
+            --bg-main: #f9fafb;
+            --text-dark: #111827;
+            --text-gray: #6b7280;
+            --border-light: #f3f4f6;
+            --primary-blue: #2563eb;
+        }
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            background-color: var(--bg-main); 
+            color: var(--text-dark);
+        }
+        /* Navbar มินิมอล */
+        .navbar-minimal {
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 0;
+        }
+        .brand-text {
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+        /* การ์ดสถิติแบบไร้ขอบ เน้นเงาบางๆ */
+        .stat-card {
+            background: #ffffff;
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+            transition: transform 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        /* การ์ดตาราง */
+        .table-card {
+            background: #ffffff;
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+        /* ตารางสไตล์มินิมอล */
+        .table { margin-bottom: 0; }
+        .table th {
+            background-color: #f9fafb;
+            color: var(--text-gray);
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-light);
+            padding: 1rem 1.5rem;
+        }
+        .table td {
+            padding: 1.2rem 1.5rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 0.95rem;
+        }
+        .table tr:last-child td { border-bottom: none; }
+        
+        /* ป้ายสถานะสีอ่อน (Soft Badges) */
+        .badge-soft {
+            padding: 0.4em 0.8em;
+            font-weight: 500;
+            border-radius: 20px;
+        }
+        .bg-soft-success { background-color: #d1fae5; color: #065f46; }
+        .bg-soft-warning { background-color: #fef3c7; color: #92400e; }
+        .bg-soft-danger { background-color: #fee2e2; color: #991b1b; }
+        
+        /* ฟอร์มและปุ่ม */
+        .form-control {
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            padding: 0.6rem 1rem;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            border-color: var(--primary-blue);
+        }
+        .btn-primary-custom {
+            background-color: var(--primary-blue);
+            border: none;
+            border-radius: 10px;
+            padding: 0.6rem 1.2rem;
+            font-weight: 500;
+        }
+        .btn-primary-custom:hover { background-color: #1d4ed8; }
+        .btn-icon {
+            color: var(--text-gray);
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            transition: color 0.2s;
+        }
+        .btn-icon:hover { color: var(--primary-blue); }
     </style>
 </head>
 <body>
 
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="dashboard.html">
-                <i class="bi bi-shield-plus"></i> SCARs Monitoring System
-            </a>
-            <a href="index.html" class="btn btn-outline-light btn-sm">ออกจากระบบ</a>
+    <!-- Header -->
+    <nav class="navbar-minimal sticky-top mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0 brand-text text-primary">SCARs System</h5>
+                    <small class="text-muted" style="font-size: 0.75rem;">Monitoring Dashboard</small>
+                </div>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="text-muted me-3 fs-6">สวัสดี, <span class="fw-medium text-dark">ภก. แมน</span></span>
+                <a href="index.html" class="btn btn-light btn-sm rounded-pill px-3" style="border: 1px solid #e5e7eb;">
+                    Logout
+                </a>
+            </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
-        <h4 class="fw-bold mb-4"><i class="bi bi-house-door text-primary"></i> Dashboard</h4>
-
-        <!-- สถิติ (Stats) -->
-        <div class="row g-3 mb-5">
+    <!-- Main Content -->
+    <div class="container pb-5">
+        
+        <!-- สถิติแบบมินิมอล -->
+        <div class="row g-4 mb-4">
             <div class="col-6 col-md-3">
-                <div class="card stat-card bg-primary text-white h-100">
-                    <div class="card-body text-center">
-                        <h6 class="mb-2">👥 ผู้ป่วยทั้งหมด</h6>
-                        <h2 class="fw-bold mb-0">135</h2>
+                <div class="stat-card p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-medium">ผู้ป่วยทั้งหมด</span>
+                        <i class="bi bi-people text-secondary"></i>
                     </div>
+                    <h3 class="fw-bold mb-0">135</h3>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card stat-card bg-success text-white h-100">
-                    <div class="card-body text-center">
-                        <h6 class="mb-2">🟢 ลงทะเบียนแล้ว</h6>
-                        <h2 class="fw-bold mb-0">120</h2>
+                <div class="stat-card p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-medium">ลงทะเบียนแล้ว</span>
+                        <i class="bi bi-check-circle text-success"></i>
                     </div>
+                    <h3 class="fw-bold mb-0">120</h3>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card stat-card bg-warning text-dark h-100">
-                    <div class="card-body text-center">
-                        <h6 class="mb-2">🟡 รอตอบแบบประเมิน</h6>
-                        <h2 class="fw-bold mb-0">18</h2>
+                <div class="stat-card p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-medium">รอตอบประเมิน</span>
+                        <i class="bi bi-clock-history text-warning"></i>
                     </div>
+                    <h3 class="fw-bold mb-0">18</h3>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card stat-card bg-danger text-white h-100">
-                    <div class="card-body text-center">
-                        <h6 class="mb-2">🔴 Risk Alert</h6>
-                        <h2 class="fw-bold mb-0">3</h2>
+                <div class="stat-card p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="text-muted small fw-medium">Risk Alert</span>
+                        <i class="bi bi-exclamation-triangle text-danger"></i>
                     </div>
+                    <h3 class="fw-bold mb-0 text-danger">3</h3>
                 </div>
             </div>
         </div>
 
-        <!-- เมนูลัด (Quick Actions) -->
-        <div class="row g-3">
-            <div class="col-6 col-md-3">
-                <a href="add-patient.html" class="btn btn-outline-primary w-100 menu-btn">
-                    <i class="bi bi-person-plus"></i> เพิ่มผู้ป่วยใหม่
+        <!-- แถบเครื่องมือค้นหา และ เพิ่มผู้ป่วย -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
+            <h5 class="fw-bold mb-0">รายชื่อผู้ป่วยติดตาม</h5>
+            <div class="d-flex gap-2">
+                <div class="input-group" style="width: 250px;">
+                    <span class="input-group-text bg-white border-end-0" style="border-radius: 10px 0 0 10px;"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" placeholder="ค้นหา HN, ชื่อ..." style="border-radius: 0 10px 10px 0;">
+                </div>
+                <a href="add-patient.html" class="btn btn-primary-custom text-white shadow-sm">
+                    <i class="bi bi-plus-lg me-1"></i> เพิ่มผู้ป่วยใหม่
                 </a>
-            </div>
-            <div class="col-6 col-md-3">
-                <a href="patient-list.html" class="btn btn-outline-primary w-100 menu-btn">
-                    <i class="bi bi-list-ul"></i> รายชื่อผู้ป่วย
-                </a>
-            </div>
-            <div class="col-6 col-md-3">
-                <button class="btn btn-outline-primary w-100 menu-btn">
-                    <i class="bi bi-journal-medical"></i> พิมพ์สมุดติดตาม
-                </button>
-            </div>
-            <div class="col-6 col-md-3">
-                <button class="btn btn-outline-primary w-100 menu-btn">
-                    <i class="bi bi-bar-chart-line"></i> รายงาน
-                </button>
             </div>
         </div>
+
+        <!-- ตารางข้อมูลรายชื่อ -->
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th width="10%">HN</th>
+                            <th width="20%">ชื่อ-นามสกุล</th>
+                            <th width="15%">ยาที่ได้รับ</th>
+                            <th width="15%">วันที่เริ่มยา</th>
+                            <th width="15%">สถานะ</th>
+                            <th width="10%" class="text-center">QR</th>
+                            <th width="15%" class="text-end">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-muted">123456</td>
+                            <td class="fw-medium text-dark">สมชาย ใจดี</td>
+                            <td><span class="badge bg-light text-dark border">Allopurinol</span></td>
+                            <td class="text-muted">01 ส.ค. 2026</td>
+                            <td><span class="badge-soft bg-soft-danger"><i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> Risk Alert</span></td>
+                            <td class="text-center"><i class="bi bi-qr-code text-muted"></i></td>
+                            <td class="text-end">
+                                <a href="patient-detail.html" class="btn btn-icon me-1"><i class="bi bi-eye"></i></a>
+                                <button class="btn btn-icon"><i class="bi bi-pencil"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">654321</td>
+                            <td class="fw-medium text-dark">สมหญิง รักษา</td>
+                            <td><span class="badge bg-light text-dark border">Carbamazepine</span></td>
+                            <td class="text-muted">05 ส.ค. 2026</td>
+                            <td><span class="badge-soft bg-soft-warning"><i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> รอประเมิน</span></td>
+                            <td class="text-center"><i class="bi bi-qr-code text-muted"></i></td>
+                            <td class="text-end">
+                                <a href="patient-detail.html" class="btn btn-icon me-1"><i class="bi bi-eye"></i></a>
+                                <button class="btn btn-icon"><i class="bi bi-pencil"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">987654</td>
+                            <td class="fw-medium text-dark">มานะ อดทน</td>
+                            <td><span class="badge bg-light text-dark border">Phenytoin</span></td>
+                            <td class="text-muted">10 ก.ค. 2026</td>
+                            <td><span class="badge-soft bg-soft-success"><i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> ปกติ</span></td>
+                            <td class="text-center"><i class="bi bi-qr-code text-muted"></i></td>
+                            <td class="text-end">
+                                <a href="patient-detail.html" class="btn btn-icon me-1"><i class="bi bi-eye"></i></a>
+                                <button class="btn btn-icon"><i class="bi bi-pencil"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
 </body>
