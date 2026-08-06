@@ -51,7 +51,6 @@
                     <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <div><p class="text-xs text-slate-500">เสี่ยงสูง</p><p class="text-xl font-bold text-red-600" id="countHighRisk">0</p></div>
                 </div>
-                <!-- เพิ่มการ์ดล่าช้าเกิน 24 ชม. -->
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-orange-500 relative overflow-hidden">
                     <div class="absolute -right-2 -top-2 w-12 h-12 bg-orange-50 rounded-full z-0"></div>
                     <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center z-10"><i class="fa-solid fa-bell-slash"></i></div>
@@ -184,57 +183,21 @@
                     </div>
                 </div>
 
-               <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ -->
-<div class="col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
-    <div class="flex justify-between items-end border-b pb-3 mb-4">
-        <h4 class="font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-mobile-screen-button text-blue-600"></i> ข้อมูลจากผู้ป่วย
-        </h4>
-    </div>
-    
-    <!-- พื้นที่แสดงผลที่จะถูกควบคุมด้วย JavaScript -->
-    <div id="assessmentContent" class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-        <!-- ข้อมูลจะถูกสร้างที่นี่ -->
-    </div>
-</div>
-                    
-                    <!-- ส่วนแสดงวันที่ตอบ -->
-                    <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4 flex items-center gap-3">
-                        <i class="fa-regular fa-calendar-check text-blue-500 text-xl"></i>
-                        <div>
-                            <p class="text-xs text-slate-500">วันที่ผู้ป่วยตอบแบบประเมิน:</p>
-                            <p class="text-sm font-bold text-slate-800">12/08/2569 เวลา 14:30 น.</p> <!-- *รอเชื่อม BackEnd -->
-                        </div>
+                <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ -->
+                <div class="col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+                    <div class="flex justify-between items-end border-b pb-3 mb-4">
+                        <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-mobile-screen-button text-blue-600"></i> ข้อมูลจากผู้ป่วย
+                        </h4>
                     </div>
-
-                    <div class="space-y-3 text-sm flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                        <!-- ตัวอย่าง UI อาการ -->
-                        <div class="p-3 rounded-lg border border-slate-200 flex justify-between items-center bg-white shadow-sm">
-                            <span class="text-slate-700">1. ผื่นแดง ตุ่มน้ำพอง</span>
-                            <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-bold"><i class="fa-solid fa-xmark mr-1"></i> มีอาการ</span>
-                        </div>
-                        <div class="p-3 rounded-lg border border-slate-200 flex justify-between items-center bg-white shadow-sm">
-                            <span class="text-slate-700">2. เจ็บตา ปากเปื่อย</span>
-                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold"><i class="fa-solid fa-check mr-1"></i> ไม่มีอาการ</span>
-                        </div>
-                        <div class="p-3 rounded-lg border border-slate-200 flex justify-between items-center bg-white shadow-sm">
-                            <span class="text-slate-700">3. ไข้สูง ปวดเมื่อย</span>
-                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold"><i class="fa-solid fa-check mr-1"></i> ไม่มีอาการ</span>
-                        </div>
-
-                        <!-- รูปภาพ -->
-                        <div class="mt-4">
-                            <p class="text-xs font-bold text-slate-500 mb-2 uppercase">ภาพถ่ายอาการ (ถ้ามี)</p>
-                            <div class="w-full h-40 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400 relative overflow-hidden group">
-                                <!-- ถ้าระบบสมบูรณ์ ให้ใส่ <img src="..."> แทนที่ icon นี้ -->
-                                <i class="fa-regular fa-image text-3xl mb-1 group-hover:scale-110 transition"></i>
-                                <span class="text-xs">รอผู้ป่วยแนบรูปภาพ</span>
-                            </div>
-                        </div>
+                    
+                    <!-- พื้นที่แสดงผลที่จะถูกควบคุมด้วย JavaScript -->
+                    <div id="assessmentContent" class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        <!-- ข้อมูลจะถูกสร้างที่นี่ -->
                     </div>
                 </div>
 
-                <!-- คอลัมน์ 3: ฟอร์มติดตามสำหรับเภสัชกร (อัปเดตใหม่) -->
+                <!-- คอลัมน์ 3: ฟอร์มติดตามสำหรับเภสัชกร -->
                 <div class="col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                     <h4 class="font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-user-doctor text-blue-600"></i> บันทึกการติดตามโดยเภสัชกร
@@ -315,7 +278,6 @@
         function toggleModal(modalID) { document.getElementById(modalID).classList.toggle("hidden"); }
 
         function getStatusBadge(status) {
-            // เช็คเคสล่าช้า 24 ชม (จำลองสถานะมาให้ดู)
             if(status === 'เลยกำหนด 24 ชม.') return '<span class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold border border-orange-200"><i class="fa-solid fa-bell-slash mr-1"></i>เลยกำหนด 24 ชม.</span>';
             if(status === 'ลงทะเบียนแล้ว') return '<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-solid fa-check mr-1"></i>ลงทะเบียนแล้ว</span>';
             if(status === 'รอตอบแบบประเมิน') return '<span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-regular fa-clock mr-1"></i>รอประเมิน</span>';
@@ -331,11 +293,7 @@
                 if(JSON.stringify(newData) !== JSON.stringify(allPatientsData)) {
                     allPatientsData = newData;
                     
-                    // แทรกตรรกะจำลองสำหรับคำนวณ Overdue (> 24ชม)
-                    // ในระบบจริง ควรคำนวณ Date Diff จากข้อมูลวันที่บันทึก
                     allPatientsData = allPatientsData.map(p => {
-                        // จำลอง: ถ้าสมมติว่ามีคำว่า "รอ" และนานแล้ว ให้เปลี่ยนเป็นเลยกำหนด
-                        // ตอนนี้ผมตั้งค่าให้ขึ้นอยู่กับ Backend ไปก่อน
                         return p; 
                     });
 
@@ -387,7 +345,6 @@
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-blue-50/50 transition-colors border-b border-slate-50";
                     
-                    // ปรับสีพื้นหลังแถวให้เด่นขึ้นถ้าเสี่ยงสูงหรือล่าช้า
                     if(row.status === 'เสี่ยงสูง') tr.classList.add('bg-red-50/30');
                     if(row.status === 'เลยกำหนด 24 ชม.') tr.classList.add('bg-orange-50/30');
 
@@ -419,59 +376,54 @@
         }
         function changePage(newPage) { currentPage = newPage; renderTable(); }
 
-       function openDetails(rowDataStr) {
-    const data = JSON.parse(decodeURIComponent(rowDataStr));
-    document.getElementById('detailHN').innerText = "HN: " + data.hn;
-    document.getElementById('detailName').innerText = data.name;
-    document.getElementById('detailDrug').innerText = data.drug;
-    document.getElementById('detailDate').innerText = data.date;
-    document.getElementById('detailStatus').innerHTML = getStatusBadge(data.status);
-    document.getElementById('detailHistory').innerText = data.history || "-";
-    
-    const fullLiffUrl = encodeURIComponent(LIFF_URL_BASE + data.hn);
-    document.getElementById('detailQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fullLiffUrl}`;
-    
-    // 👇👇👇 เพิ่มโค้ดส่วนนี้เข้าไป 👇👇👇
-    const assessmentContent = document.getElementById('assessmentContent');
-    
-    if (data.status === 'รอตอบแบบประเมิน' || data.status === 'เลยกำหนด 24 ชม.') {
-        // กรณีที่ยังไม่ตอบ
-        assessmentContent.innerHTML = `
-            <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12 mt-10">
-                <i class="fa-regular fa-clock text-5xl mb-4 text-slate-200"></i>
-                <p class="text-sm font-medium">ผู้ป่วยยังไม่ได้ทำแบบประเมิน</p>
-                <p class="text-xs text-slate-400 mt-1">กรุณารอผู้ป่วยสแกน QR Code</p>
-            </div>
-        `;
-    } else {
-        // กรณีที่ตอบแล้ว (สถานะ: ลงทะเบียนแล้ว หรือ เสี่ยงสูง)
-        // (หมายเหตุ: ตอนนี้ทำ UI รองรับไว้ก่อน ในอนาคตถ้าต้องการให้โชว์ว่าติ๊กข้อไหนบ้างเป๊ะๆ ต้องเขียน Apps script ดึงจากชีต Assessments มาเพิ่มครับ)
-        assessmentContent.innerHTML = `
-            <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4 flex items-center gap-3">
-                <i class="fa-regular fa-calendar-check text-blue-500 text-xl"></i>
-                <div>
-                    <p class="text-xs text-slate-500">สถานะการตอบประเมิน:</p>
-                    <p class="text-sm font-bold text-slate-800">ตอบประเมินเรียบร้อยแล้ว</p>
-                </div>
-            </div>
+        function openDetails(rowDataStr) {
+            const data = JSON.parse(decodeURIComponent(rowDataStr));
+            document.getElementById('detailHN').innerText = "HN: " + data.hn;
+            document.getElementById('detailName').innerText = data.name;
+            document.getElementById('detailDrug').innerText = data.drug;
+            document.getElementById('detailDate').innerText = data.date;
+            document.getElementById('detailStatus').innerHTML = getStatusBadge(data.status);
+            document.getElementById('detailHistory').innerText = data.history || "-";
             
-            <div class="p-4 rounded-lg border ${data.status === 'เสี่ยงสูง' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'} flex justify-between items-center shadow-sm">
-                <span class="${data.status === 'เสี่ยงสูง' ? 'text-red-700' : 'text-green-700'} font-bold text-sm">
-                    ผลลัพธ์: ${data.status}
-                </span>
-            </div>
+            const fullLiffUrl = encodeURIComponent(LIFF_URL_BASE + data.hn);
+            document.getElementById('detailQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fullLiffUrl}`;
+            
+            const assessmentContent = document.getElementById('assessmentContent');
+            
+            if (data.status === 'รอตอบแบบประเมิน' || data.status === 'เลยกำหนด 24 ชม.') {
+                assessmentContent.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12 mt-10">
+                        <i class="fa-regular fa-clock text-5xl mb-4 text-slate-200"></i>
+                        <p class="text-sm font-medium">ผู้ป่วยยังไม่ได้ทำแบบประเมิน</p>
+                        <p class="text-xs text-slate-400 mt-1">กรุณารอผู้ป่วยสแกน QR Code</p>
+                    </div>
+                `;
+            } else {
+                assessmentContent.innerHTML = `
+                    <div class="bg-blue-50 border border-blue-100 p-3 rounded-lg mb-4 flex items-center gap-3">
+                        <i class="fa-regular fa-calendar-check text-blue-500 text-xl"></i>
+                        <div>
+                            <p class="text-xs text-slate-500">สถานะการตอบประเมิน:</p>
+                            <p class="text-sm font-bold text-slate-800">ตอบประเมินเรียบร้อยแล้ว</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 rounded-lg border ${data.status === 'เสี่ยงสูง' ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'} flex justify-between items-center shadow-sm">
+                        <span class="${data.status === 'เสี่ยงสูง' ? 'text-red-700' : 'text-green-700'} font-bold text-sm">
+                            ผลลัพธ์: ${data.status}
+                        </span>
+                    </div>
 
-            <div class="mt-8">
-                <p class="text-xs font-bold text-slate-500 mb-2 uppercase text-center">ภาพถ่ายอาการ</p>
-                <div class="w-full h-40 bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400">
-                    <i class="fa-regular fa-image text-3xl mb-1"></i>
-                    <span class="text-xs">ไม่มีรูปภาพแนบ</span>
-                </div>
-            </div>
-        `;
-    }
-    // 👆👆👆 สิ้นสุดโค้ดที่ต้องเพิ่ม 👆👆👆
-       
+                    <div class="mt-8">
+                        <p class="text-xs font-bold text-slate-500 mb-2 uppercase text-center">ภาพถ่ายอาการ</p>
+                        <div class="w-full h-40 bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg flex flex-col items-center justify-center text-slate-400">
+                            <i class="fa-regular fa-image text-3xl mb-1"></i>
+                            <span class="text-xs">ไม่มีรูปภาพแนบ</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
             toggleModal('patientDetailsModal');
         }
 
@@ -526,23 +478,19 @@
         // ==========================================
         function savePharmacistNote() {
             const btn = document.getElementById('saveNoteBtn');
-            // จำลองการเซฟไป Backend
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
             btn.disabled = true;
             
             setTimeout(() => {
-                // เปลี่ยนเป็นสีเขียว
                 btn.innerHTML = '<i class="fa-solid fa-check-circle text-lg"></i> บันทึกเรียบร้อย';
                 btn.classList.replace('bg-blue-600', 'bg-green-500');
                 btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-600');
                 
-                // คืนค่าปุ่มกลับเป็นปกติหลัง 3 วินาที
                 setTimeout(() => {
                     btn.innerHTML = '<i class="fa-solid fa-save"></i> บันทึกประวัติการติดตาม';
                     btn.classList.replace('bg-green-500', 'bg-blue-600');
                     btn.classList.replace('hover:bg-green-600', 'hover:bg-blue-700');
                     btn.disabled = false;
-                    // ล้างฟอร์ม (ถ้าต้องการ)
                 }, 3000);
             }, 800);
         }
@@ -556,7 +504,7 @@
                 name: document.getElementById('patientName').value, 
                 drug: document.getElementById('drug').value, 
                 date: document.getElementById('startDate').value,
-                history: document.getElementById('allergyHistory').value // เพิ่มประวัติแพ้ยาเดิม
+                history: document.getElementById('allergyHistory').value
             };
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...'; btn.disabled = true;
             try {
