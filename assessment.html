@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แบบประเมินอาการแพ้ยา (SCARs)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- เรียกใช้ LINE LIFF SDK -->
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-sm overflow-hidden border border-slate-200">
+        <!-- Header -->
+        <div class="bg-blue-600 p-4 text-white text-center">
+            <i class="fa-solid fa-file-medical text-3xl mb-2"></i>
+            <h1 class="text-xl font-bold">แบบประเมินอาการแพ้ยา</h1>
+            <p class="text-sm opacity-90">ระบบเฝ้าระวังอาการแพ้ยารุนแรง (SCARs)</p>
+        </div>
+
+        <!-- User Profile (ดึงจาก LINE) -->
+        <div id="profileBox" class="p-4 border-b border-slate-100 flex items-center gap-3 hidden">
+            <img id="userImage" src="" alt="Profile" class="w-10 h-10 rounded-full border border-slate-200">
+            <div>
+                <p class="text-sm text-slate-500">บัญชีผู้ใช้ LINE</p>
+                <p id="userName" class="font-semibold text-slate-800"></p>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form id="assessmentForm" class="p-5 space-y-4">
+            <!-- ซ่อน HN ไว้ เพราะดึงมาจาก URL ตอนสแกน QR -->
+            <input type="hidden" id="patientHN">
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">1. ท่านมีผื่นแดง ตุ่มน้ำพอง ตามผิวหนังหรือไม่?</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2"><input type="radio" name="symp1" value="yes" class="text-blue-600"> มี</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="symp1" value="no" class="text-blue-600" checked> ไม่มี</label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">2. มีอาการเจ็บตา ตาแดง ปากเปื่อย เยื่อบุอักเสบ หรือไม่?</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2"><input type="radio" name="symp2" value="yes" class="text-blue-600"> มี</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="symp2" value="no" class="text-blue-600" checked> ไม่มี</label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">3. มีไข้สูง ปวดเมื่อยตามตัวคล้ายไข้หวัดใหญ่ หรือไม่?</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2"><input type="radio" name="symp3" value="yes" class="text-blue-600"> มี</label>
+                    <label class="flex items-center gap-2"><input type="radio" name="symp3" value="no" class="text-blue-600" checked> ไม่มี</label>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition">
+                ส่งแบบประเมิน
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // ==========================================
+        // ⚠️ 1. ใส่ LIFF ID ที่ได้จาก LINE Developer
+        // ==========================================
+        const MY_LIFF_ID = "2010995687-3szXwNXK";
+        
+        // ==========================================
+        // ⚠️ 2. ใส่ Web App URL ของ Google Apps Script อันเดิมของคุณ
+        // ==========================================
+        const GOOGLE_APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJEFDkLdkHLrrqTAKVff5EFigcEKui0YMttJ4WFYYm3NwX-RBg8e3XTCbbQcv3eAT3/exec";
+
+        async function initializeLiff() {
+            try {
+                await liff.init({ liffId: MY_LIFF_ID });
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    document.getElementById('userName').innerText = profile.displayName;
+                    document.getElementById('userImage').src = profile.pictureUrl;
+                    document.getElementById('profileBox').classList.remove('hidden');
+                    
+                    // ดึง parameter 'hn' จาก URL ที่แนบมากับ QR Code
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const hn = urlParams.get('hn');
+                    if(hn) {
+                        document.getElementById('patientHN').value = hn;
+                    }
+                } else {
+                    liff.login();
+                }
+            } catch (err) {
+                console.error('LIFF Error:', err);
+            }
+        }
+
+        document.getElementById('assessmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังส่งข้อมูล...';
+            btn.disabled = true;
+
+            const hn = document.getElementById('patientHN').value || "ไม่ระบุ";
+            const symp1 = document.querySelector('input[name="symp1"]:checked').value;
+            const symp2 = document.querySelector('input[name="symp2"]:checked').value;
+            const symp3 = document.querySelector('input[name="symp3"]:checked').value;
+            
+            // คำนวณความเสี่ยงเบื้องต้น (ถ้ามีข้อไหนตอบ yes คือเสี่ยง)
+            const isRisk = (symp1 === 'yes' || symp2 === 'yes' || symp3 === 'yes') ? "เสี่ยงสูง" : "ปกติ";
+
+            const payload = {
+                action: 'submit_assessment',
+                hn: hn,
+                symp1: symp1,
+                symp2: symp2,
+                symp3: symp3,
+                risk: isRisk
+            };
+
+            try {
+                const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+                
+                const result = await response.json();
+                if(result.status === 'success') {
+                    alert('ส่งแบบประเมินเรียบร้อยแล้ว ขอบคุณครับ');
+                    liff.closeWindow(); // ปิดหน้าต่าง LINE อัตโนมัติ
+                }
+            } catch (error) {
+                alert('เกิดข้อผิดพลาดในการส่งข้อมูล');
+                btn.innerHTML = 'ส่งแบบประเมิน';
+                btn.disabled = false;
+            }
+        });
+
+        // เริ่มต้นการทำงานของ LIFF
+        initializeLiff();
+    </script>
+</body>
+</html>
