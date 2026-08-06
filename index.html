@@ -420,6 +420,7 @@
             document.getElementById('detailDrug').innerText = data.drug;
             document.getElementById('detailDate').innerText = data.date;
             document.getElementById('detailStatus').innerHTML = getStatusBadge(data.status);
+            document.getElementById('detailHistory').innerText = data.history;
             
             // สร้าง QR Code สำหรับนำไปพิมพ์ A5
             const fullLiffUrl = encodeURIComponent(LIFF_URL_BASE + data.hn);
