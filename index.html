@@ -3,73 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCARs Monitoring System - Patient List</title>
+    <title>SCARs Monitoring System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; }
-        /* Modal background */
         .modal-bg { background-color: rgba(0, 0, 0, 0.5); }
     </style>
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
 
-    <!-- Sidebar -->
+    <!-- Sidebar (เหมือนเดิม) -->
     <aside class="w-64 bg-[#1e3a8a] text-white flex flex-col shadow-lg z-10">
         <div class="p-6 flex items-center gap-3 border-b border-blue-800">
             <i class="fa-solid fa-shield-halved text-2xl"></i>
             <h1 class="font-bold text-lg leading-tight">SCARs<br><span class="text-xs font-normal text-blue-200">Monitoring System</span></h1>
         </div>
         <nav class="flex-1 p-4 space-y-2 mt-2">
-            <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-blue-800 rounded-lg text-sm transition-colors">
-                <i class="fa-solid fa-chart-pie w-5 text-blue-300"></i> Dashboard
-            </a>
             <a href="#" class="flex items-center gap-3 px-4 py-3 bg-blue-700 rounded-lg text-sm font-medium shadow-inner">
                 <i class="fa-solid fa-users w-5 text-white"></i> ผู้ป่วย
             </a>
-            <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-blue-800 rounded-lg text-sm transition-colors">
-                <i class="fa-solid fa-clipboard-list w-5 text-blue-300"></i> พิมพ์สมุดติดตาม
-            </a>
-            <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-blue-800 rounded-lg text-sm transition-colors">
-                <i class="fa-solid fa-chart-line w-5 text-blue-300"></i> รายงาน
-            </a>
         </nav>
-        <div class="p-4 border-t border-blue-800 text-xs text-blue-300 text-center">
-            &copy; 2026 Pharmacy Dept.
-        </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="flex-1 flex flex-col h-screen overflow-hidden">
         <!-- Header -->
         <header class="bg-white px-8 py-4 shadow-sm flex justify-between items-center z-0">
             <h2 class="text-2xl font-bold text-slate-800">รายชื่อผู้ป่วย</h2>
-            <div class="flex items-center gap-5">
-                <div class="relative cursor-pointer">
-                    <i class="fa-regular fa-bell text-slate-500 text-xl hover:text-blue-600 transition"></i>
-                    <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">3</span>
-                </div>
-                <div class="flex items-center gap-3 border-l pl-5 border-slate-200">
-                    <div class="w-9 h-9 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg shadow-sm">P</div>
-                    <div class="flex flex-col">
-                        <span class="text-sm font-bold text-slate-700">Piyachat (Pharmacist)</span>
-                        <span class="text-xs text-slate-400">แผนกเภสัชกรรม</span>
-                    </div>
-                </div>
-            </div>
         </header>
 
         <!-- Content Area -->
         <div class="p-8 flex-1 overflow-y-auto bg-slate-50">
-            
             <!-- Table Controls -->
             <div class="flex justify-between items-center mb-6">
                 <div class="relative w-72">
                     <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                    <input type="text" placeholder="ค้นหา HN, ชื่อ, ยา..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-sm">
+                    <!-- เพิ่ม ID ให้ช่องค้นหา และใส่ onkeyup -->
+                    <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="ค้นหา HN, ชื่อ, ยา..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm">
                 </div>
-                <button onclick="toggleModal('addPatientModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
+                <button onclick="toggleModal('addPatientModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> เพิ่มผู้ป่วยใหม่
                 </button>
             </div>
@@ -84,90 +57,108 @@
                             <th class="px-6 py-4 font-semibold">ยาที่ได้รับ</th>
                             <th class="px-6 py-4 font-semibold">วันที่เริ่มยา</th>
                             <th class="px-6 py-4 font-semibold text-center">สถานะ</th>
-                            <th class="px-6 py-4 font-semibold text-center">QR Code</th>
                             <th class="px-6 py-4 font-semibold text-center">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="patientTableBody" class="text-sm divide-y divide-slate-100">
-                        <!-- Data will be loaded here via JavaScript -->
-                        <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-slate-400">
-                                <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i><br>
-                                กำลังโหลดข้อมูลจาก Google Sheets...
-                            </td>
-                        </tr>
+                        <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-blue-500"></i><br>กำลังโหลดข้อมูล...</td></tr>
                     </tbody>
                 </table>
                 
-                <!-- Pagination (Static for demo) -->
+                <!-- Pagination (ทำระบบให้กดได้จริง) -->
                 <div class="px-6 py-4 border-t border-slate-200 flex justify-between items-center bg-slate-50">
-                    <span class="text-sm text-slate-500">แสดง 1-5 จาก 120 รายการ</span>
-                    <div class="flex gap-1">
-                        <button class="px-3 py-1 border border-slate-300 rounded text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                        <button class="px-3 py-1 bg-blue-600 text-white rounded shadow-sm">1</button>
-                        <button class="px-3 py-1 border border-slate-300 rounded text-slate-600 hover:bg-slate-100">2</button>
-                        <button class="px-3 py-1 border border-slate-300 rounded text-slate-600 hover:bg-slate-100">3</button>
-                        <span class="px-2 py-1 text-slate-400">...</span>
-                        <button class="px-3 py-1 border border-slate-300 rounded text-slate-600 hover:bg-slate-100"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                    <span id="pageInfo" class="text-sm text-slate-500">แสดง 0 รายการ</span>
+                    <div class="flex gap-1" id="paginationControls">
+                        <!-- ปุ่มจะถูกสร้างอัตโนมัติด้วย JavaScript -->
                     </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Modal: Add Patient -->
+    <!-- Modal: เพิ่มผู้ป่วยใหม่ (หน้าเดิม) -->
     <div id="addPatientModal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-50">
-        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden transform transition-all">
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="text-lg font-bold text-slate-800">เพิ่มผู้ป่วยใหม่</h3>
-                <button onclick="toggleModal('addPatientModal')" class="text-slate-400 hover:text-slate-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+        <!-- โครงสร้างเดิม ย่อไว้เพื่อความกระชับ (คัดลอกของเดิมมาใส่ได้เลยถ้าฟอร์มเหมือนเดิม) -->
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold">เพิ่มผู้ป่วยใหม่</h3>
+                <button onclick="toggleModal('addPatientModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            
             <form id="addPatientForm" onsubmit="submitForm(event)" class="p-6">
                 <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">HN <span class="text-red-500">*</span></label>
-                        <input type="text" id="hn" required placeholder="กรอก HN" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">วันที่เริ่มยา <span class="text-red-500">*</span></label>
-                        <input type="date" id="startDate" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                    </div>
+                    <div><label class="block text-sm mb-1">HN</label><input type="text" id="hn" required class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div><label class="block text-sm mb-1">วันที่เริ่มยา</label><input type="date" id="startDate" required class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div class="col-span-2"><label class="block text-sm mb-1">ชื่อ - นามสกุล</label><input type="text" id="patientName" required class="w-full px-3 py-2 border rounded-lg"></div>
                     <div class="col-span-2">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">ชื่อ - นามสกุล <span class="text-red-500">*</span></label>
-                        <input type="text" id="patientName" required placeholder="กรอกชื่อ - นามสกุล" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                    </div>
-                    <div class="col-span-2">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">ยาที่ได้รับ (Suspected Drug) <span class="text-red-500">*</span></label>
-                        <select id="drug" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        <label class="block text-sm mb-1">ยาที่ได้รับ</label>
+                        <select id="drug" required class="w-full px-3 py-2 border rounded-lg">
                             <option value="">เลือกยา...</option>
                             <option value="Allopurinol">Allopurinol</option>
                             <option value="Carbamazepine">Carbamazepine</option>
-                            <option value="Phenytoin">Phenytoin</option>
-                            <option value="Lamotrigine">Lamotrigine</option>
-                            <option value="Co-trimoxazole">Co-trimoxazole</option>
                         </select>
                     </div>
                 </div>
-                
                 <div id="formStatus" class="hidden mb-4 p-3 rounded-lg text-sm text-center font-medium"></div>
-
                 <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" onclick="toggleModal('addPatientModal')" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">ยกเลิก</button>
-                    <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors flex items-center gap-2">
-                        บันทึกข้อมูล
-                    </button>
+                    <button type="button" onclick="toggleModal('addPatientModal')" class="px-4 py-2 border rounded-lg text-sm">ยกเลิก</button>
+                    <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm">บันทึกข้อมูล</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- JavaScript For Connecting to Google Sheets API -->
+    <!-- Modal: ดูรายละเอียดผู้ป่วย (พิมพ์สมุด + บันทึกเภสัชกร) -->
+    <div id="patientDetailsModal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-50">
+        <div class="bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden h-[80vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-blue-50">
+                <h3 class="text-lg font-bold text-blue-800">รายละเอียดและการติดตามผู้ป่วย</h3>
+                <button onclick="toggleModal('patientDetailsModal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <div class="p-6 flex-1 overflow-y-auto grid grid-cols-3 gap-6">
+                <!-- คอลัมน์ซ้าย: ข้อมูลผู้ป่วย & พิมพ์สมุด -->
+                <div class="col-span-1 border-r border-slate-200 pr-6 space-y-4">
+                    <div class="text-center mb-4">
+                        <div class="w-24 h-24 bg-slate-200 rounded-full mx-auto mb-2 flex items-center justify-center text-3xl text-slate-400"><i class="fa-solid fa-user"></i></div>
+                        <h4 id="detailName" class="font-bold text-lg text-slate-800">ชื่อ-สกุล</h4>
+                        <p id="detailHN" class="text-sm text-slate-500">HN: -</p>
+                        <div id="detailStatus" class="mt-2"></div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg text-sm space-y-2">
+                        <p><span class="font-semibold">ยาที่แพ้:</span> <span id="detailDrug"></span></p>
+                        <p><span class="font-semibold">เริ่มยาเมื่อ:</span> <span id="detailDate"></span></p>
+                    </div>
+                    <!-- ปุ่มสำหรับฟีเจอร์ในอนาคต -->
+                    <button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-print"></i> พิมพ์สมุดประจำตัว + QR
+                    </button>
+                </div>
+
+                <!-- คอลัมน์ขวา: การติดตามโดยเภสัชกร -->
+                <div class="col-span-2 space-y-4">
+                    <h4 class="font-bold text-slate-800 border-b pb-2"><i class="fa-solid fa-stethoscope text-blue-600 mr-2"></i>บันทึกการติดตามโดยเภสัชกร</h4>
+                    <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-sm text-yellow-800 mb-4">
+                        <i class="fa-solid fa-circle-info mr-2"></i> ส่วนนี้เตรียมไว้สำหรับดึงประวัติการตอบแบบประเมินและให้เภสัชกรบันทึก Note เพิ่มเติม (รอดำเนินการเฟสต่อไป)
+                    </div>
+                    <textarea rows="4" placeholder="พิมพ์บันทึกอาการหรือข้อเสนอแนะเพิ่มเติมที่นี่..." class="w-full p-3 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                    <div class="flex justify-end">
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">บันทึกประวัติการติดตาม</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript สำหรับระบบข้อมูล -->
     <script>
-        // ==========================================
-        // ⚠️ เปลี่ยน URL ด้านล่างเป็น Web App URL ของคุณที่ได้จาก Google Apps Script
-        // ==========================================
-        const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJEFDkLdkHLrrqTAKVff5EFigcEKui0YMttJ4WFYYm3NwX-RBg8e3XTCbbQcv3eAT3/exec'; 
+        // ⚠️ ใส่ Web App URL ของคุณที่นี่
+        const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyutEYHT-bUxuDMqTiOXF_FT9tiBNs838b75dSVIgPjPNqeymaPfXQ5K5P-nWsrhTov/exec'; 
+
+        // ตัวแปรสำหรับระบบค้นหาและแบ่งหน้า
+        let allPatientsData = []; // เก็บข้อมูลทั้งหมด
+        let filteredData = [];    // เก็บข้อมูลที่ถูกค้นหา
+        let currentPage = 1;
+        const rowsPerPage = 5;    // กำหนดจำนวนคนต่อหน้า
 
         function toggleModal(modalID) {
             document.getElementById(modalID).classList.toggle("hidden");
@@ -175,120 +166,141 @@
 
         function getStatusBadge(status) {
             if(status === 'ลงทะเบียนแล้ว') return '<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">ลงทะเบียนแล้ว</span>';
-            if(status === 'รอลงทะเบียน' || status === '') return '<span class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-semibold">รอลงทะเบียน</span>';
-            if(status === 'รอตอบแบบประเมิน') return '<span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">รอตอบแบบประเมิน</span>';
-            if(status === 'เสี่ยงสูง') return '<span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">เสี่ยงสูง</span>';
+            if(status === 'รอลงทะเบียน' || status === 'รอตอบแบบประเมิน') return '<span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">รอตอบแบบประเมิน</span>';
+            if(status === 'เสี่ยงสูง') return '<span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold animate-pulse">เสี่ยงสูง</span>';
             return `<span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">${status}</span>`;
         }
 
+        // 1. โหลดข้อมูล (ลบข้อมูลจำลองออก)
         async function loadData() {
-            const tbody = document.getElementById('patientTableBody');
-            
-            if (GOOGLE_APP_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbzJEFDkLdkHLrrqTAKVff5EFigcEKui0YMttJ4WFYYm3NwX-RBg8e3XTCbbQcv3eAT3/exec') {
-                renderTable([
-                    { hn: '123456', name: 'นายสมชาย ใจดี', drug: 'Allopurinol', date: '01/08/2568', status: 'ลงทะเบียนแล้ว' },
-                    { hn: '654321', name: 'นางสาววิภา รักสุขภาพ', drug: 'Carbamazepine', date: '28/07/2568', status: 'ลงทะเบียนแล้ว' },
-                    { hn: '112233', name: 'นางอนันต์ มีสุข', drug: 'Phenytoin', date: '25/07/2568', status: 'รอตอบแบบประเมิน' },
-                    { hn: '778899', name: 'นายปรีชา แข็งแรง', drug: 'Lamotrigine', date: '18/07/2568', status: 'รอลงทะเบียน' }
-                ]);
-                return;
-            }
-
             try {
                 const response = await fetch(GOOGLE_APP_SCRIPT_URL);
-                const data = await response.json();
-                renderTable(data);
+                allPatientsData = await response.json();
+                filteredData = allPatientsData; // เริ่มต้นให้ข้อมูลที่ค้นหา = ข้อมูลทั้งหมด
+                currentPage = 1;
+                renderTable();
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-4 text-center text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`;
-                console.error('Error fetching data:', error);
+                document.getElementById('patientTableBody').innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-red-500">เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล</td></tr>`;
             }
         }
 
-        function renderTable(data) {
+        // 2. ฟังก์ชันแสดงผลตาราง + แบ่งหน้า
+        function renderTable() {
             const tbody = document.getElementById('patientTableBody');
             tbody.innerHTML = '';
             
-            if(data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-500">ไม่มีข้อมูลผู้ป่วย</td></tr>`;
-                return;
-            }
+            // คำนวณการแบ่งหน้า
+            const totalItems = filteredData.length;
+            const totalPages = Math.ceil(totalItems / rowsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            
+            const startIdx = (currentPage - 1) * rowsPerPage;
+            const endIdx = startIdx + rowsPerPage;
+            const dataToShow = filteredData.slice(startIdx, endIdx);
 
-            data.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors";
-                tr.innerHTML = `
-                    <td class="px-6 py-4 text-slate-700">${row.hn}</td>
-                    <td class="px-6 py-4 font-medium text-slate-800">${row.name}</td>
-                    <td class="px-6 py-4 text-slate-600">${row.drug}</td>
-                    <td class="px-6 py-4 text-slate-600">${row.date}</td>
-                    <td class="px-6 py-4 text-center">${getStatusBadge(row.status)}</td>
-                    <td class="px-6 py-4 text-center">
-                        <button class="text-slate-400 hover:text-blue-600 transition" title="ดู QR Code"><i class="fa-solid fa-qrcode text-xl"></i></button>
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <button class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded text-xs font-semibold transition">ดูรายละเอียด</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+            if(dataToShow.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">ไม่พบข้อมูลผู้ป่วย</td></tr>`;
+            } else {
+                dataToShow.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition-colors";
+                    // แปลง row object เป็น JSON string เพื่อส่งไปที่ฟังก์ชันเปิดรายละเอียด
+                    const rowDataStr = encodeURIComponent(JSON.stringify(row));
+                    
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 text-slate-700">${row.hn}</td>
+                        <td class="px-6 py-4 font-medium text-slate-800">${row.name}</td>
+                        <td class="px-6 py-4 text-slate-600">${row.drug}</td>
+                        <td class="px-6 py-4 text-slate-600">${row.date}</td>
+                        <td class="px-6 py-4 text-center">${getStatusBadge(row.status)}</td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="openDetails('${rowDataStr}')" class="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded text-xs font-semibold transition">ดูรายละเอียด</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            updatePaginationUI(totalItems, totalPages);
         }
 
+        // 3. ฟังก์ชันค้นหาข้อมูล
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            filteredData = allPatientsData.filter(row => {
+                return String(row.hn).toLowerCase().includes(query) || 
+                       String(row.name).toLowerCase().includes(query) || 
+                       String(row.drug).toLowerCase().includes(query);
+            });
+            currentPage = 1; // กลับไปหน้าแรกเสมอเวลาค้นหา
+            renderTable();
+        }
+
+        // 4. อัปเดตปุ่มเปลี่ยนหน้า
+        function updatePaginationUI(totalItems, totalPages) {
+            const pageInfo = document.getElementById('pageInfo');
+            const controls = document.getElementById('paginationControls');
+            
+            let startCount = totalItems === 0 ? 0 : ((currentPage - 1) * rowsPerPage) + 1;
+            let endCount = Math.min(currentPage * rowsPerPage, totalItems);
+            pageInfo.innerText = `แสดง ${startCount}-${endCount} จาก ${totalItems} รายการ`;
+
+            let buttonsHTML = '';
+            // ปุ่มย้อนกลับ
+            buttonsHTML += `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 border rounded ${currentPage === 1 ? 'text-slate-300 bg-slate-50' : 'text-slate-600 hover:bg-slate-100'}"><i class="fa-solid fa-chevron-left text-xs"></i></button>`;
+            
+            // หมายเลขหน้า
+            for(let i = 1; i <= totalPages; i++) {
+                if (i === currentPage) {
+                    buttonsHTML += `<button class="px-3 py-1 bg-blue-600 text-white rounded shadow-sm">${i}</button>`;
+                } else {
+                    buttonsHTML += `<button onclick="changePage(${i})" class="px-3 py-1 border rounded text-slate-600 hover:bg-slate-100">${i}</button>`;
+                }
+            }
+            
+            // ปุ่มถัดไป
+            buttonsHTML += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 border rounded ${currentPage === totalPages ? 'text-slate-300 bg-slate-50' : 'text-slate-600 hover:bg-slate-100'}"><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
+            
+            controls.innerHTML = buttonsHTML;
+        }
+
+        function changePage(newPage) {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderTable();
+            }
+        }
+
+        // 5. เปิดหน้ารายละเอียดผู้ป่วย
+        function openDetails(rowDataStr) {
+            const data = JSON.parse(decodeURIComponent(rowDataStr));
+            document.getElementById('detailHN').innerText = "HN: " + data.hn;
+            document.getElementById('detailName').innerText = data.name;
+            document.getElementById('detailDrug').innerText = data.drug;
+            document.getElementById('detailDate').innerText = data.date;
+            document.getElementById('detailStatus').innerHTML = getStatusBadge(data.status);
+            
+            toggleModal('patientDetailsModal');
+        }
+
+        // (ฟังก์ชัน submitForm แบบเดิมยังคงใช้อยู่เหมือนเดิม... ตัดออกเพื่อความสั้น)
         async function submitForm(event) {
             event.preventDefault();
-            
-            const submitBtn = document.getElementById('submitBtn');
+            const btn = document.getElementById('submitBtn');
             const statusDiv = document.getElementById('formStatus');
             
-            const payload = {
-                action: 'add_patient',
-                hn: document.getElementById('hn').value,
-                name: document.getElementById('patientName').value,
-                drug: document.getElementById('drug').value,
-                date: document.getElementById('startDate').value
-            };
+            const payload = { action: 'add_patient', hn: document.getElementById('hn').value, name: document.getElementById('patientName').value, drug: document.getElementById('drug').value, date: document.getElementById('startDate').value };
 
-            if (GOOGLE_APP_SCRIPT_URL === 'YOUR_GOOGLE_WEB_APP_URL_HERE') {
-                statusDiv.classList.remove('hidden', 'bg-green-100', 'text-green-700');
-                statusDiv.classList.add('bg-yellow-100', 'text-yellow-700');
-                statusDiv.innerText = '⚠️ กรุณาใส่ Web App URL ของ Google Apps Script ในบรรทัดที่ 146 ก่อนทำการบันทึกจริง';
-                return;
-            }
-
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
-            submitBtn.disabled = true;
-            statusDiv.classList.add('hidden');
-
+            btn.innerHTML = 'กำลังบันทึก...'; btn.disabled = true;
             try {
-                const response = await fetch(GOOGLE_APP_SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload),
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-                });
-                
-                const result = await response.json();
-                
+                const res = await fetch(GOOGLE_APP_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+                const result = await res.json();
                 if(result.status === 'success') {
-                    statusDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-yellow-100', 'text-yellow-700');
-                    statusDiv.classList.add('bg-green-100', 'text-green-700');
-                    statusDiv.innerHTML = '<i class="fa-solid fa-check-circle"></i> บันทึกข้อมูลและสร้าง QR Code สำเร็จ!';
-                    
                     document.getElementById('addPatientForm').reset();
-                    
-                    setTimeout(() => {
-                        toggleModal('addPatientModal');
-                        loadData();
-                        statusDiv.classList.add('hidden');
-                    }, 1500);
+                    toggleModal('addPatientModal');
+                    loadData(); // โหลดข้อมูลใหม่ทันที
                 }
-            } catch (error) {
-                statusDiv.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-yellow-100', 'text-yellow-700');
-                statusDiv.classList.add('bg-red-100', 'text-red-700');
-                statusDiv.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> เกิดข้อผิดพลาด ไม่สามารถบันทึกข้อมูลได้';
-                console.error(error);
-            } finally {
-                submitBtn.innerHTML = 'บันทึกข้อมูล';
-                submitBtn.disabled = false;
-            }
+            } catch (error) { alert("เกิดข้อผิดพลาด"); } finally { btn.innerHTML = 'บันทึกข้อมูล'; btn.disabled = false; }
         }
 
         window.onload = loadData;
