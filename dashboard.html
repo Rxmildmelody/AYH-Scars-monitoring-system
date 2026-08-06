@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - SCARs Monitoring</title>
+    <title>Dashboard - SCARs Monitoring (Phase 1)</title>
     <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -13,242 +13,360 @@
     
     <style>
         :root {
-            --bg-main: #f9fafb;
-            --text-dark: #111827;
-            --text-gray: #6b7280;
-            --border-light: #f3f4f6;
-            --primary-blue: #2563eb;
+            --bg-page: #eef2f6; /* ลดความขาวของพื้นหลัง เปลี่ยนเป็นเทาฟ้าอ่อน */
+            --primary-dark: #1e3a8a;
+            --risk-red: #fef2f2;
+            --risk-red-border: #f87171;
+            --risk-yellow: #fefce8;
+            --risk-yellow-border: #facc15;
+            --risk-green: #f0fdf4;
+            --risk-green-border: #4ade80;
         }
         body { 
             font-family: 'Prompt', sans-serif; 
-            background-color: var(--bg-main); 
-            color: var(--text-dark);
+            background-color: var(--bg-page); 
+            font-size: 0.9rem;
         }
-        /* Navbar มินิมอล */
-        .navbar-minimal {
-            background-color: #ffffff;
-            border-bottom: 1px solid var(--border-light);
-            padding: 1rem 0;
+        .card-panel {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            height: 100%;
         }
-        .brand-text {
+        .header-title {
+            color: var(--primary-dark);
             font-weight: 600;
-            letter-spacing: -0.3px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
         }
-        /* การ์ดสถิติแบบไร้ขอบ เน้นเงาบางๆ */
-        .stat-card {
-            background: #ffffff;
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
-            transition: transform 0.2s ease;
-        }
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-        /* การ์ดตาราง */
-        .table-card {
-            background: #ffffff;
-            border: none;
-            border-radius: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            overflow: hidden;
-        }
-        /* ตารางสไตล์มินิมอล */
-        .table { margin-bottom: 0; }
-        .table th {
-            background-color: #f9fafb;
-            color: var(--text-gray);
-            font-weight: 500;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border-light);
-            padding: 1rem 1.5rem;
-        }
-        .table td {
-            padding: 1.2rem 1.5rem;
-            vertical-align: middle;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 0.95rem;
-        }
-        .table tr:last-child td { border-bottom: none; }
         
-        /* ป้ายสถานะสีอ่อน (Soft Badges) */
-        .badge-soft {
-            padding: 0.4em 0.8em;
-            font-weight: 500;
-            border-radius: 20px;
+        /* สถิติด้านบนคอลัมน์ 1 */
+        .stat-box {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
         }
-        .bg-soft-success { background-color: #d1fae5; color: #065f46; }
-        .bg-soft-warning { background-color: #fef3c7; color: #92400e; }
-        .bg-soft-danger { background-color: #fee2e2; color: #991b1b; }
+        .stat-box.dark { background-color: var(--primary-dark); color: white; border: none; }
+        .stat-num { font-size: 1.5rem; font-weight: 600; margin: 0; }
         
-        /* ฟอร์มและปุ่ม */
-        .form-control {
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            padding: 0.6rem 1rem;
-        }
-        .form-control:focus {
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-            border-color: var(--primary-blue);
-        }
-        .btn-primary-custom {
-            background-color: var(--primary-blue);
-            border: none;
-            border-radius: 10px;
-            padding: 0.6rem 1.2rem;
-            font-weight: 500;
-        }
-        .btn-primary-custom:hover { background-color: #1d4ed8; }
-        .btn-icon {
-            color: var(--text-gray);
-            background: none;
-            border: none;
-            font-size: 1.1rem;
-            transition: color 0.2s;
-        }
-        .btn-icon:hover { color: var(--primary-blue); }
+        /* ตารางคอลัมน์ 1 */
+        .table-risk tbody tr.row-red { background-color: var(--risk-red); }
+        .table-risk tbody tr.row-yellow { background-color: var(--risk-yellow); }
+        .table-risk tbody tr.row-green { background-color: var(--risk-green); }
+        .table-risk td { vertical-align: middle; padding: 10px 5px; border-bottom: 1px solid #fff;}
+        
+        /* Badge คะแนน */
+        .score-badge { display: block; padding: 4px; border-radius: 6px; font-weight: 500; text-align: center;}
+        .score-red { background-color: #ef4444; color: white; }
+        .score-yellow { background-color: #facc15; color: #713f12; }
+        .score-green { background-color: #22c55e; color: white; }
+
+        /* แท็บคอลัมน์ 2 */
+        .nav-tabs .nav-link { color: #64748b; font-weight: 500; border: none; border-bottom: 3px solid transparent; padding: 8px 12px;}
+        .nav-tabs .nav-link.active { color: var(--primary-dark); border-bottom: 3px solid var(--primary-dark); background: transparent; }
+        
+        .img-symptom { width: 100%; max-width: 150px; border-radius: 8px; object-fit: cover; border: 1px solid #cbd5e1;}
+        
+        /* ฟอร์มคอลัมน์ 3 */
+        .form-control, .form-select { border-radius: 8px; font-size: 0.9rem; border-color: #cbd5e1;}
+        .form-control:focus, .form-select:focus { box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.1); border-color: #3b82f6;}
+        .btn-success-custom { background-color: #10b981; border: none; color: white; font-weight: 500;}
+        .btn-success-custom:hover { background-color: #059669; color: white;}
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <nav class="navbar-minimal sticky-top mb-4">
-        <div class="container d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
-                    <i class="bi bi-heart-pulse-fill"></i>
-                </div>
-                <div>
-                    <h5 class="mb-0 brand-text text-primary">SCARs System</h5>
-                    <small class="text-muted" style="font-size: 0.75rem;">Monitoring Dashboard</small>
-                </div>
-            </div>
-            <div class="d-flex align-items-center">
-                <span class="text-muted me-3 fs-6">สวัสดี, <span class="fw-medium text-dark">ภก. แมน</span></span>
-                <a href="index.html" class="btn btn-light btn-sm rounded-pill px-3" style="border: 1px solid #e5e7eb;">
-                    Logout
-                </a>
-            </div>
+    <!-- Header Navbar -->
+    <div class="bg-white border-bottom py-3 mb-4 shadow-sm">
+        <div class="container-fluid px-4 text-center">
+            <h4 class="mb-0 fw-bold" style="color: #1e3a8a;">SCARs Monitoring Dashboard (Pharmacist)</h4>
         </div>
-    </nav>
-
-    <!-- Main Content -->
-    <div class="container pb-5">
-        
-        <!-- สถิติแบบมินิมอล -->
-        <div class="row g-4 mb-4">
-            <div class="col-6 col-md-3">
-                <div class="stat-card p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="text-muted small fw-medium">ผู้ป่วยทั้งหมด</span>
-                        <i class="bi bi-people text-secondary"></i>
-                    </div>
-                    <h3 class="fw-bold mb-0">135</h3>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="text-muted small fw-medium">ลงทะเบียนแล้ว</span>
-                        <i class="bi bi-check-circle text-success"></i>
-                    </div>
-                    <h3 class="fw-bold mb-0">120</h3>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="text-muted small fw-medium">รอตอบประเมิน</span>
-                        <i class="bi bi-clock-history text-warning"></i>
-                    </div>
-                    <h3 class="fw-bold mb-0">18</h3>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="stat-card p-4">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="text-muted small fw-medium">Risk Alert</span>
-                        <i class="bi bi-exclamation-triangle text-danger"></i>
-                    </div>
-                    <h3 class="fw-bold mb-0 text-danger">3</h3>
-                </div>
-            </div>
-        </div>
-
-        <!-- แถบเครื่องมือค้นหา และ เพิ่มผู้ป่วย -->
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
-            <h5 class="fw-bold mb-0">รายชื่อผู้ป่วยติดตาม</h5>
-            <div class="d-flex gap-2">
-                <div class="input-group" style="width: 250px;">
-                    <span class="input-group-text bg-white border-end-0" style="border-radius: 10px 0 0 10px;"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0 ps-0" placeholder="ค้นหา HN, ชื่อ..." style="border-radius: 0 10px 10px 0;">
-                </div>
-                <a href="add-patient.html" class="btn btn-primary-custom text-white shadow-sm">
-                    <i class="bi bi-plus-lg me-1"></i> เพิ่มผู้ป่วยใหม่
-                </a>
-            </div>
-        </div>
-
-        <!-- ตารางข้อมูลรายชื่อ -->
-        <div class="table-card">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th width="10%">HN</th>
-                            <th width="20%">ชื่อ-นามสกุล</th>
-                            <th width="15%">ยาที่ได้รับ</th>
-                            <th width="15%">วันที่เริ่มยา</th>
-                            <th width="15%">สถานะ</th>
-                            <th width="10%" class="text-center">QR</th>
-                            <th width="15%" class="text-end">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="text-muted">123456</td>
-                            <td class="fw-medium text-dark">สมชาย ใจดี</td>
-                            <td><span class="badge bg-light text-dark border">Allopurinol</span></td>
-                            <td class="text-muted">01 ส.ค. 2026</td>
-                            <td><span class="badge-soft bg-soft-danger"><i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> Risk Alert</span></td>
-                            <td class="text-center"><i class="bi bi-qr-code text-muted"></i></td>
-                            <td class="text-end">
-                                <a href="patient-detail.html" class="btn btn-icon me-1"><i class="bi bi-eye"></i></a>
-                                <button class="btn btn-icon"><i class="bi bi-pencil"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">654321</td>
-                            <td class="fw-medium text-dark">สมหญิง รักษา</td>
-                            <td><span class="badge bg-light text-dark border">Carbamazepine</span></td>
-                            <td class="text-muted">05 ส.ค. 2026</td>
-                            <td><span class="badge-soft bg-soft-warning"><i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> รอประเมิน</span></td>
-                            <td class="text-center"><i class="bi bi-qr-code text-muted"></i></td>
-                            <td class="text-end">
-                                <a href="patient-detail.html" class="btn btn-icon me-1"><i class="bi bi-eye"></i></a>
-                                <button class="btn btn-icon"><i class="bi bi-pencil"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">987654</td>
-                            <td class="fw-medium text-dark">มานะ อดทน</td>
-                            <td><span class="badge bg-light text-dark border">Phenytoin</span></td>
-                            <td class="text-muted">10 ก.ค. 2026</td>
-                            <td><span class="badge-soft bg-soft-success"><i class="bi bi-circle-fill me-1" style="font-size: 6px; vertical-align: middle;"></i> ปกติ</span></td>
-                            <td class="text-center"><i class="bi bi-qr-code text-muted"></i></td>
-                            <td class="text-end">
-                                <a href="patient-detail.html" class="btn btn-icon me-1"><i class="bi bi-eye"></i></a>
-                                <button class="btn btn-icon"><i class="bi bi-pencil"></i></button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
     </div>
 
+    <!-- Main 3 Columns Layout -->
+    <div class="container-fluid px-4 pb-5">
+        <div class="row g-3">
+            
+            <!-- ================= Column 1: Dashboard & List ================= -->
+            <div class="col-lg-4">
+                <div class="card-panel p-3">
+                    <h6 class="header-title">1. หน้าแรก (จัดลำดับความเสี่ยง)</h6>
+                    
+                    <!-- Stats Grid -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-3">
+                            <div class="stat-box dark h-100">
+                                <small>ผู้ป่วยทั้งหมด</small>
+                                <p class="stat-num" id="stat-total">124</p>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="stat-box h-100">
+                                <small>ต้องติดตามวันนี้</small>
+                                <p class="stat-num">32</p>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="stat-box h-100" style="border-color: #f87171;">
+                                <small class="text-danger fw-bold">Red Flag</small>
+                                <p class="stat-num text-danger" id="stat-red">3</p>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="stat-box h-100">
+                                <small>รอการตอบ</small>
+                                <p class="stat-num">18</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mt-4 mb-2">รายการผู้ป่วยเรียงตามความเสี่ยง</h6>
+                    <div class="table-responsive">
+                        <table class="table table-risk text-center" id="patientTable">
+                            <thead>
+                                <tr class="text-muted small border-bottom">
+                                    <th>ลำดับ</th>
+                                    <th class="text-start">ผู้ป่วย</th>
+                                    <th>ยา</th>
+                                    <th>ความเสี่ยง</th>
+                                    <th>อัปเดตล่าสุด</th>
+                                </tr>
+                            </thead>
+                            <!-- ข้อมูลจะถูกดึงมาใส่ตรงนี้ผ่าน JS -->
+                            <tbody id="patientTableBody">
+                                <tr class="row-red">
+                                    <td>1</td>
+                                    <td class="text-start"><strong>ตาบุญธรรม</strong><br><span class="text-muted small">ID: 12345</span></td>
+                                    <td>Allopurinol</td>
+                                    <td><span class="score-badge score-red">8/10<br><small>(เสี่ยงสูง)</small></span></td>
+                                    <td>10:15</td>
+                                </tr>
+                                <tr class="row-yellow">
+                                    <td>2</td>
+                                    <td class="text-start"><strong>นางสมใจ ใจดี</strong><br><span class="text-muted small">ID: 23456</span></td>
+                                    <td>Carbamazepine</td>
+                                    <td><span class="score-badge score-yellow">5/10<br><small>(ปานกลาง)</small></span></td>
+                                    <td>09:45</td>
+                                </tr>
+                                <tr class="row-yellow">
+                                    <td>3</td>
+                                    <td class="text-start"><strong>นายวิชัย รักดี</strong><br><span class="text-muted small">ID: 34567</span></td>
+                                    <td>Phenytoin</td>
+                                    <td><span class="score-badge score-yellow">3/10<br><small>(ต่ำ)</small></span></td>
+                                    <td>09:30</td>
+                                </tr>
+                                <tr class="row-green">
+                                    <td>4</td>
+                                    <td class="text-start"><strong>นางสายฝน ดีมาก</strong><br><span class="text-muted small">ID: 45678</span></td>
+                                    <td>Cotrimoxazole</td>
+                                    <td><span class="score-badge score-green">1/10<br><small>(ต่ำ)</small></span></td>
+                                    <td>09:10</td>
+                                </tr>
+                                <tr class="row-green">
+                                    <td>5</td>
+                                    <td class="text-start"><strong>นายประมวล มีสุข</strong><br><span class="text-muted small">ID: 56789</span></td>
+                                    <td>Lamotrigine</td>
+                                    <td><span class="score-badge score-green">1/10<br><small>(ต่ำ)</small></span></td>
+                                    <td>08:55</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= Column 2: Patient Details ================= -->
+            <div class="col-lg-4">
+                <div class="card-panel p-3">
+                    <h6 class="header-title">2. รายละเอียดผู้ป่วย (Red Flag)</h6>
+                    
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="d-flex gap-3">
+                            <div class="bg-secondary bg-opacity-25 rounded d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                <i class="bi bi-person-fill fs-1 text-secondary"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0">ตาบุญธรรม <span class="fs-6 text-muted fw-normal">(ID: 12345)</span></h5>
+                                <p class="mb-0 text-muted small mt-1">ยา: Allopurinol | วันที่เริ่มยา: 01 ส.ค. 2026 (ครบ 14 วัน)</p>
+                            </div>
+                        </div>
+                        <span class="badge bg-danger p-2 fs-6">Red Flag</span>
+                    </div>
+
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs mb-3 border-bottom">
+                        <li class="nav-item"><a class="nav-link active" href="#">สรุปข้อมูล</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#">ข้อมูลการตอบ</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#">รูปถ่าย</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#">ประวัติการติดตาม</a></li>
+                    </ul>
+
+                    <div class="row">
+                        <div class="col-8">
+                            <p class="fw-bold small mb-2">ผลการประเมินล่าสุด (14 ส.ค. 2026 10:12 น.)</p>
+                            <table class="table table-bordered table-sm small text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>อาการ</th>
+                                        <th>คำตอบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="text-start">มีไข้ / เจ็บคอ</td><td class="text-danger">มีอาการ (ใช่)</td></tr>
+                                    <tr><td class="text-start">ตาแดง / เคืองตา</td><td class="text-danger">มีอาการ (ใช่)</td></tr>
+                                    <tr><td class="text-start">แผลในปาก</td><td>ไม่มีอาการ (ไม่ใช่)</td></tr>
+                                    <tr><td class="text-start">ผื่น</td><td>-</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-4">
+                            <p class="fw-bold small mb-2">รูปถ่ายที่ผู้ป่วยส่งมา</p>
+                            <div class="position-relative">
+                                <!-- รูปจำลองดวงตาแดง -->
+                                <img src="https://images.unsplash.com/photo-1589710759320-99772cba2358?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80" alt="Eye Symptom" class="img-symptom">
+                                <button class="btn btn-dark btn-sm position-absolute bottom-0 end-0 m-1 opacity-75"><i class="bi bi-zoom-in"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <p class="fw-bold mb-2">ข้อมูลติดต่อ</p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small">
+                            <p class="mb-1">เบอร์โทร: 081-XXX-XXXX</p>
+                            <p class="mb-0 text-muted">ที่อยู่: 99 ม.1 ต.บ้านนอก อ.เมือง จ.ราชบุรี</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success-custom btn-sm px-3"><i class="bi bi-telephone-fill"></i> โทรหาผู้ป่วย</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= Column 3: Tele-intervention Form ================= -->
+            <div class="col-lg-4">
+                <div class="card-panel p-3">
+                    <h6 class="header-title">3. การบันทึกการติดตาม (Tele-intervention)</h6>
+                    
+                    <form id="interventionForm">
+                        <p class="fw-bold mb-3">บันทึกการติดตาม <span class="text-muted fw-normal">(14 ส.ค. 2026)</span></p>
+                        
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-4"><label class="form-label mb-0">วิธีการติดตาม</label></div>
+                            <div class="col-8">
+                                <select class="form-select" id="contactMethod">
+                                    <option value="โทรศัพท์" selected>โทรศัพท์</option>
+                                    <option value="LINE">LINE OA</option>
+                                    <option value="ผู้ป่วยมา รพ.">ผู้ป่วยมา รพ.</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-4"><label class="form-label mt-2 mb-0">สรุปการสนทนา</label></div>
+                            <div class="col-8">
+                                <textarea class="form-control" rows="4" id="conversationSummary">ซักประวัติเพิ่มเติม ไข้ 38.5°C เริ่มเมื่อวาน มีผื่นแดงลามที่ลำตัว ยืนยันให้หยุดยา Allopurinol ทันที และนำส่งไปโรงพยาบาล (ER) แล้ว</textarea>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-4"><label class="form-label mb-0">คำแนะนำที่ให้</label></div>
+                            <div class="col-8">
+                                <div class="form-check text-success">
+                                    <input class="form-check-input bg-success border-success" type="checkbox" id="advStop" checked>
+                                    <label class="form-check-label" for="advStop">หยุดยา</label>
+                                </div>
+                                <div class="form-check text-success">
+                                    <input class="form-check-input bg-success border-success" type="checkbox" id="advER" checked>
+                                    <label class="form-check-label" for="advER">ไปโรงพยาบาล (ER)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="advAppt">
+                                    <label class="form-check-label" for="advAppt">นัดพบแพทย์</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-4"><label class="form-label mb-0">บันทึกโดย</label></div>
+                            <div class="col-8">
+                                <select class="form-select bg-light" id="recordedBy">
+                                    <option value="ภก. แมน" selected>ภก. แมน</option>
+                                    <option value="ภก. สมชาย ใจดี">ภก. สมชาย ใจดี</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="text-end mt-4">
+                            <button type="button" class="btn btn-success-custom px-4 py-2 w-100" onclick="saveToGoogleSheets()">
+                                <i class="bi bi-save me-1"></i> บันทึกข้อมูล
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script สำหรับเตรียมเชื่อม Google Sheets (Phase 2) -->
+    <script>
+        // สมมติ URL ของ Web App ที่ได้จาก Google Apps Script (Phase 2)
+        const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+
+        // ฟังก์ชันจำลองการดึงข้อมูลรายชื่อผู้ป่วยจาก Sheet มาแสดงในตารางคอลัมน์ 1
+        async function fetchPatients() {
+            try {
+                // ของจริงจะใช้โค้ดนี้:
+                // const response = await fetch(GOOGLE_SHEET_API_URL + "?action=getPatients");
+                // const data = await response.json();
+                
+                console.log("กำลังดึงข้อมูลจาก Google Sheets...");
+                // นำ data มาวนลูปสร้าง <tr> ใส่ใน document.getElementById('patientTableBody')
+                
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        // ฟังก์ชันเมื่อเภสัชกรกดปุ่ม "บันทึกข้อมูล" ในคอลัมน์ 3
+        function saveToGoogleSheets() {
+            // 1. ดึงค่าจากฟอร์ม
+            const recordData = {
+                method: document.getElementById('contactMethod').value,
+                summary: document.getElementById('conversationSummary').value,
+                advice: {
+                    stopDrug: document.getElementById('advStop').checked,
+                    goER: document.getElementById('advER').checked,
+                    makeAppt: document.getElementById('advAppt').checked
+                },
+                pharmacist: document.getElementById('recordedBy').value,
+                timestamp: new Date().toISOString()
+            };
+
+            // 2. ส่งข้อมูลไป Google Apps Script (จำลอง)
+            console.log("Data to send to Google Sheets:", recordData);
+            alert("บันทึกข้อมูลการติดตามของ ตาบุญธรรม เรียบร้อยแล้ว (จำลองการส่งข้อมูลไป Google Sheets)");
+
+            /* ของจริงใน Phase 2 จะใช้แบบนี้:
+            fetch(GOOGLE_SHEET_API_URL, {
+                method: 'POST',
+                body: JSON.stringify(recordData)
+            }).then(res => res.json()).then(result => {
+                alert("บันทึกสำเร็จ!");
+            });
+            */
+        }
+
+        // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
+        window.onload = () => {
+            fetchPatients();
+        };
+    </script>
 </body>
 </html>
