@@ -618,11 +618,41 @@
         function updateSummaryCards() {
             let highRisk = 0, pending = 0, normal = 0, overdue = 0;
             allPatientsData.forEach(row => {
-                if(row.status === 'เสี่ยงสูง') highRisk++;
-                else if(row.status === 'รอตอบแบบประเมิน') pending++;
-                else if(row.status === 'เลยกำหนด 24 ชม.') overdue++;
-                else if(row.status === 'ลงทะเบียนแล้ว' || row.status === 'ปกติ') normal++;
+                // คำนวณสถานะฝั่ง Client ให้ตรงกับเงื่อนไขใหม่ 100%
+                let computedStatus = row.status;
+                const assessments = row.assessments || [];
+                
+                if (assessments.length === 0 && row.rawDate) {
+                    const start = new Date(row.rawDate);
+                    const now = new Date();
+                    
+                    const checkClientOverdue = (days) => {
+                        const due = new Date(start);
+                        due.setDate(due.getDate() + days);
+                        const deadline = new Date(due);
+                        deadline.setDate(deadline.getDate() + 1); // เกิน 24 ชม. จากวันครบกำหนด
+                        deadline.setHours(0,0,0,0);
+                        return now.getTime() > deadline.getTime();
+                    };
+
+                    if (checkClientOverdue(7) || checkClientOverdue(14) || checkClientOverdue(42)) {
+                        computedStatus = 'เลยกำหนด 24 ชม.';
+                    } else {
+                        computedStatus = 'รอตอบแบบประเมิน';
+                    }
+                } else if (assessments.length > 0) {
+                    const hasHighRisk = assessments.some(a => a.risk === 'เสี่ยงสูง');
+                    computedStatus = hasHighRisk ? 'เสี่ยงสูง' : 'ลงทะเบียนแล้ว';
+                }
+
+                row.status = computedStatus; // อัปเดตสถานะจริงให้แถวข้อมูล
+
+                if(computedStatus === 'เสี่ยงสูง') highRisk++;
+                else if(computedStatus === 'รอตอบแบบประเมิน') pending++;
+                else if(computedStatus === 'เลยกำหนด 24 ชม.') overdue++;
+                else if(computedStatus === 'ลงทะเบียนแล้ว' || computedStatus === 'ปกติ') normal++;
             });
+
             const unread = countTotalUnread();
             document.getElementById('countTotal').innerText = allPatientsData.length;
             document.getElementById('countHighRisk').innerText = highRisk;
