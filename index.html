@@ -392,13 +392,8 @@
         let sidebarCollapsed = false;
         let currentView = 'patients';
 
-        // In-memory store keyed by HN for pharmacist notes and viewed-state overrides.
-        // NOTE: The current Google Apps Script backend only supports adding patients (action:
-        // 'add_patient'). Pharmacist follow-up notes and per-assessment "viewed" state are kept
-        // client-side here for now (payloads are still POSTed with an 'add_note' action so the
-        // backend can be extended later to persist them permanently).
-        const pharmacistNotesStore = {};   // { [hn]: [{date, followPeriod, followMethod, summary, recommendation, recorder}] }
-        const viewedOverrides = {};        // { [hn]: { [entryDate]: true } }
+        const pharmacistNotesStore = {};   
+        const viewedOverrides = {};        
 
         let currentPatientRow = null;
         let currentAssessmentHistory = [];
@@ -469,7 +464,8 @@
 
         async function loadData() {
             try {
-                const response = await fetch(GOOGLE_APP_SCRIPT_URL);
+                // FIX 1: เพิ่ม Cache-Buster (t=...) ป้องกันบราวเซอร์จำหน้าเว็บเก่า (ทำให้ตารางอัปเดตแบบเรียลไทม์)
+                const response = await fetch(GOOGLE_APP_SCRIPT_URL + '?t=' + new Date().getTime());
                 const newData = await response.json();
 
                 if(JSON.stringify(newData) !== JSON.stringify(allPatientsData)) {
@@ -477,19 +473,51 @@
                     handleSearch();
                     updateSummaryCards();
                     if (currentView === 'stats') renderStatsView();
+
+                    // FIX 4: อัปเดตแฟ้มประวัติแบบเรียลไทม์ (ถ้าเภสัชกรเปิดแฟ้มคนไข้ค้างไว้อยู่)
+                    const modal = document.getElementById('patientDetailsModal');
+                    if (!modal.classList.contains('hidden') && currentPatientRow) {
+                        const updatedRow = allPatientsData.find(p => p.hn === currentPatientRow.hn);
+                        if (updatedRow) {
+                            currentPatientRow = updatedRow;
+                            currentAssessmentHistory = getAssessmentHistory(updatedRow);
+                            document.getElementById('detailStatus').innerHTML = getStatusBadge(updatedRow.status);
+                            populateAssessmentDropdown();
+                            markQuickTabsData();
+                            
+                            if (currentAssessmentHistory.length > 0) {
+                                let nextIdx = currentAssessmentIndex >= 0 && currentAssessmentIndex < currentAssessmentHistory.length ? currentAssessmentIndex : 0;
+                                const unreadIdx = currentAssessmentHistory.findIndex(e => e.viewed === false);
+                                if (unreadIdx !== -1) nextIdx = unreadIdx;
+                                renderAssessmentEntry(nextIdx, true);
+                            }
+                            renderPharmacistNoteHistory(updatedRow.hn);
+                        }
+                    }
                 }
                 document.getElementById('lastUpdateTime').innerText = new Date().toLocaleTimeString('th-TH') + ' น.';
-            } catch (error) { console.error("Auto-refresh failed"); }
+            } catch (error) { console.error("Auto-refresh failed", error); }
         }
 
         // ---------- Assessment history helpers ----------
-        // Normalizes a patient row's assessment data into a chronological array of entries.
-        // Prefers row.assessmentHistory (array) if the backend provides it; otherwise falls back
-        // to constructing a single entry from the legacy flat symp1-4 fields for backward compatibility.
         function getAssessmentHistory(row) {
             let history = [];
-            if (Array.isArray(row.assessmentHistory) && row.assessmentHistory.length > 0) {
-                history = row.assessmentHistory.slice();
+            // FIX 2: ดึง Array ข้อมูลประวัติจากตัวแปรที่ส่งมาจาก Backend ให้ถูกต้อง (รองรับทั้งระบบเก่าและระบบล่าสุด)
+            const backendAssessments = row.assessments || row.assessmentHistory;
+            
+            if (Array.isArray(backendAssessments) && backendAssessments.length > 0) {
+                // FIX 3: ทำ Data Mapping ให้ชื่อตัวแปร (Field) สอดคล้องกับที่ Frontend เรียกใช้
+                history = backendAssessments.map(a => {
+                    const hasExtra = a.extraSymp && a.extraSymp !== "-" && a.extraSymp !== "";
+                    return {
+                        ...a,
+                        date: a.date || a.timestamp,       // แปลง timestamp ของ Backend เป็น date เพื่อให้เรียงวันที่ได้
+                        timestamp: a.timestamp || a.date,
+                        viewed: a.viewed !== undefined ? a.viewed : (a.isRead !== undefined ? a.isRead : true), // แปลงระบบแจ้งเตือน
+                        symp5: a.symp5 !== undefined ? a.symp5 : (hasExtra ? 'yes' : 'no'), // แปลงช่องข้อความเพิ่มเติม
+                        symp5Text: a.symp5Text !== undefined ? a.symp5Text : (a.extraSymp || '')
+                    };
+                });
             } else if (row.status !== 'รอตอบแบบประเมิน' && row.status !== 'เลยกำหนด 24 ชม.') {
                 history = [{
                     date: row.assessRawDate || row.rawDate,
@@ -501,9 +529,8 @@
                     viewed: true
                 }];
             }
-            // sort newest first
+            // เรียงจากประวัติล่าสุดให้อยู่บนสุด
             history.sort((a, b) => new Date(b.date) - new Date(a.date));
-            // apply local viewed overrides
             const overrides = viewedOverrides[row.hn] || {};
             history.forEach(e => { if (overrides[e.date]) e.viewed = true; });
             return history;
@@ -523,7 +550,7 @@
                 if(row.status === 'เสี่ยงสูง') highRisk++;
                 else if(row.status === 'รอตอบแบบประเมิน') pending++;
                 else if(row.status === 'เลยกำหนด 24 ชม.') overdue++;
-                else if(row.status === 'ลงทะเบียนแล้ว') normal++;
+                else if(row.status === 'ลงทะเบียนแล้ว' || row.status === 'ปกติ') normal++;
             });
             const unread = countTotalUnread();
             document.getElementById('countTotal').innerText = allPatientsData.length;
@@ -605,7 +632,6 @@
         }
         function changePage(newPage) { currentPage = newPage; renderTable(); }
 
-        // คำนวณวันที่เพิ่มไป X วัน (คืนทั้งข้อความแสดงผล และวันที่ดิบ)
         function calculateFollowUpDate(rawDateStr, addDays) {
             if(!rawDateStr) return { display: "-", raw: null };
             const d = new Date(rawDateStr);
@@ -628,7 +654,6 @@
             const fullLiffUrl = encodeURIComponent(LIFF_URL_BASE + data.hn);
             document.getElementById('detailQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fullLiffUrl}`;
 
-            // กำหนดการ +7, +14, +42 วัน จากวันที่เริ่มยา (rawDate)
             const d7 = calculateFollowUpDate(data.rawDate, 7);
             const d14 = calculateFollowUpDate(data.rawDate, 14);
             const d42 = calculateFollowUpDate(data.rawDate, 42);
@@ -639,13 +664,11 @@
 
             document.getElementById('timeRegister').innerText = data.regTimestamp || "ไม่มีข้อมูล";
 
-            // สร้างประวัติการประเมินทั้งหมด
             currentAssessmentHistory = getAssessmentHistory(data);
             populateAssessmentDropdown();
             markQuickTabsData();
 
             if (currentAssessmentHistory.length > 0) {
-                // เปิดรายการล่าสุด (หรือรายการที่ยังไม่ได้อ่านล่าสุด ถ้ามี)
                 let startIndex = currentAssessmentHistory.findIndex(e => e.viewed === false);
                 if (startIndex === -1) startIndex = 0;
                 renderAssessmentEntry(startIndex);
@@ -663,7 +686,7 @@
             }
 
             renderPharmacistNoteHistory(data.hn);
-            toggleModal('patientDetailsModal');
+            document.getElementById('patientDetailsModal').classList.remove('hidden');
         }
 
         function populateAssessmentDropdown() {
@@ -705,7 +728,7 @@
             currentAssessmentHistory.forEach(entry => {
                 if (!entry.date) return;
                 const diff = Math.abs(new Date(entry.date) - target);
-                if (diff < closestDiff && diff <= 1000 * 60 * 60 * 24 * 3) { // within 3-day tolerance
+                if (diff < closestDiff && diff <= 1000 * 60 * 60 * 24 * 3) { 
                     closest = entry; closestDiff = diff;
                 }
             });
@@ -733,7 +756,7 @@
             }
             const idx = currentAssessmentHistory.indexOf(entry);
             document.getElementById('assessmentDateSelect').value = idx;
-            renderAssessmentEntry(idx, /*skipTabClear*/ true);
+            renderAssessmentEntry(idx, true);
         }
 
         function renderAssessmentEntry(idx, skipTabClear) {
@@ -763,14 +786,14 @@
                         `;
                     }
                     return `
-                        <div class="p-3 border border-red-200 rounded-lg mb-3 bg-red-50 shadow-sm">
+                        <div class="p-3 border border-red-200 rounded-lg mb-3 bg-red-50 shadow-sm fade-in">
                             <p class="text-sm font-bold text-red-700"><i class="fa-solid fa-xmark mr-1"></i> มีอาการ: ${label}</p>
                             ${imageHtml}
                         </div>
                     `;
                 } else if (answer === 'no') {
                     return `
-                        <div class="p-3 border border-green-200 rounded-lg mb-3 bg-green-50 text-green-700 text-sm font-bold shadow-sm">
+                        <div class="p-3 border border-green-200 rounded-lg mb-3 bg-green-50 text-green-700 text-sm font-bold shadow-sm fade-in">
                             <i class="fa-solid fa-check mr-1"></i> ไม่มีอาการ: ${label}
                         </div>
                     `;
@@ -778,7 +801,6 @@
                 return '';
             };
 
-            // อาการที่ 5: รายการเพิ่มเติมที่ผู้ป่วยระบุเอง (ข้อความอิสระ) + รูปภาพ (ไม่บังคับ)
             const renderCustomSymptom = (answer, customText, photoUrl) => {
                 if (answer !== 'yes') return '';
                 let imageHtml = '';
@@ -793,7 +815,7 @@
                     imageHtml = `<p class="text-xs text-slate-400 mt-2"><i class="fa-regular fa-image mr-1"></i>ไม่มีรูปภาพแนบ (ไม่บังคับ)</p>`;
                 }
                 return `
-                    <div class="p-3 border border-purple-200 rounded-lg mb-3 bg-purple-50 shadow-sm">
+                    <div class="p-3 border border-purple-200 rounded-lg mb-3 bg-purple-50 shadow-sm fade-in">
                         <p class="text-sm font-bold text-purple-700"><i class="fa-solid fa-comment-medical mr-1"></i> อาการเพิ่มเติมที่ผู้ป่วยระบุเอง</p>
                         <p class="text-sm text-purple-800 mt-1">${customText ? customText : '(ไม่ได้ระบุรายละเอียด)'}</p>
                         ${imageHtml}
@@ -810,7 +832,6 @@
                 ${renderCustomSymptom(entry.symp5, entry.symp5Text, entry.photo5)}
             `;
 
-            // ทำเครื่องหมายว่าอ่านแล้ว
             if (entry.viewed === false) {
                 entry.viewed = true;
                 viewedOverrides[currentPatientRow.hn] = viewedOverrides[currentPatientRow.hn] || {};
@@ -867,7 +888,7 @@
             const now = new Date();
 
             const note = {
-                date: now.toLocaleString('th-TH'),        // วันที่บันทึกอัตโนมัติ
+                date: now.toLocaleString('th-TH'),
                 followPeriod: periodSelect.value,
                 followPeriodLabel: periodSelect.options[periodSelect.selectedIndex].text,
                 followMethod: methodSelect.value === 'other' ? methodOther : methodSelect.value,
@@ -881,14 +902,13 @@
             if (!pharmacistNotesStore[hn]) pharmacistNotesStore[hn] = [];
             pharmacistNotesStore[hn].push(note);
 
-            // พยายามส่งไปยัง backend ด้วย (สำหรับผู้ที่ขยาย Apps Script ให้รองรับ action นี้ในอนาคต)
             try {
                 await fetch(GOOGLE_APP_SCRIPT_URL, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'add_note', hn, ...note }),
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                 });
-            } catch (e) { /* เก็บไว้ใน local store ต่อแม้ backend จะยังไม่รองรับ */ }
+            } catch (e) { }
 
             renderPharmacistNoteHistory(hn);
 
@@ -965,7 +985,7 @@
                 if(row.status === 'เสี่ยงสูง') highRisk++;
                 else if(row.status === 'รอตอบแบบประเมิน') pending++;
                 else if(row.status === 'เลยกำหนด 24 ชม.') overdue++;
-                else if(row.status === 'ลงทะเบียนแล้ว') normal++;
+                else if(row.status === 'ลงทะเบียนแล้ว' || row.status === 'ปกติ') normal++;
                 drugCounts[row.drug] = (drugCounts[row.drug] || 0) + 1;
             });
             const responded = total - pending - overdue;
