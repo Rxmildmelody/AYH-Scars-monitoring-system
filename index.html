@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -6,177 +6,231 @@
     <title>SCARs Monitoring System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; }
         .modal-bg { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Sidebar transition */
-        #sidebar { transition: margin-left 0.3s ease-in-out; }
-        .sidebar-closed { margin-left: -16rem; } /* 16rem = w-64 */
-        
-        /* Timeline line */
-        .timeline-container { position: relative; border-left: 2px solid #e2e8f0; margin-left: 1rem; padding-left: 1.5rem; }
-        .timeline-dot { position: absolute; left: -0.45rem; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; }
+        .sidebar-label { transition: opacity .15s ease, width .15s ease; white-space: nowrap; overflow: hidden; }
+        .sidebar-collapsed .sidebar-label { opacity: 0; width: 0; }
+        .sidebar-collapsed .sidebar-brand-text { opacity: 0; width: 0; }
+        .quick-tab { cursor: pointer; transition: all .15s ease; }
+        .quick-tab.active { background-color: #1e3a8a !important; color: white !important; }
+        .quick-tab.active .quick-tab-label, .quick-tab.active .quick-tab-date { color: white !important; }
+        .quick-tab.has-data:not(.active)::after { content: ''; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 999px; background: #22c55e; }
+        .quick-tab.unread:not(.active)::after { background: #ef4444; }
+        .quick-tab { position: relative; }
+        .unread-dot { display:inline-block; width:8px; height:8px; border-radius:999px; background:#ef4444; margin-right:4px; box-shadow: 0 0 0 2px #fff; }
+        select#assessmentDateSelect option.unread-opt { font-weight: 700; }
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+        .fade-in { animation: fadeIn .2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
     </style>
 </head>
 <body class="bg-slate-50 flex h-screen overflow-hidden text-slate-800">
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="w-64 bg-[#1e3a8a] text-white flex flex-col shadow-lg z-20 shrink-0">
-        <div class="p-6 flex justify-between items-center border-b border-blue-800">
-            <div class="flex items-center gap-3">
-                <i class="fa-solid fa-shield-halved text-2xl"></i>
-                <h1 class="font-bold text-lg leading-tight">SCARs<br><span class="text-xs font-normal text-blue-200">Monitoring System</span></h1>
-            </div>
-            <button onclick="toggleSidebar()" class="md:hidden text-blue-200 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+    <aside id="sidebar" class="w-64 bg-[#1e3a8a] text-white flex flex-col shadow-lg z-10 transition-all duration-300">
+        <div class="p-6 flex items-center gap-3 border-b border-blue-800 relative">
+            <i class="fa-solid fa-shield-halved text-2xl shrink-0"></i>
+            <h1 class="font-bold text-lg leading-tight sidebar-brand-text">SCARs<br><span class="text-xs font-normal text-blue-200">Monitoring System</span></h1>
         </div>
         <nav class="flex-1 p-4 space-y-2 mt-2">
-            <a href="#" onclick="switchMenu('dashboard')" id="menu-dashboard" class="flex items-center gap-3 px-4 py-3 bg-blue-700 rounded-lg text-sm font-medium shadow-inner transition">
-                <i class="fa-solid fa-users w-5 text-center text-white"></i> จัดการผู้ป่วย
+            <a href="#" onclick="switchView('patients');return false;" data-nav="patients" class="nav-item flex items-center gap-3 px-4 py-3 bg-blue-700 rounded-lg text-sm font-medium shadow-inner">
+                <i class="fa-solid fa-users w-5 text-white shrink-0"></i> <span class="sidebar-label">จัดการผู้ป่วย</span>
             </a>
-            <a href="#" onclick="switchMenu('stats')" id="menu-stats" class="flex items-center gap-3 px-4 py-3 hover:bg-blue-700 rounded-lg text-sm font-medium transition text-blue-100">
-                <i class="fa-solid fa-chart-pie w-5 text-center"></i> สถิติการประเมิน
+            <a href="#" onclick="switchView('stats');return false;" data-nav="stats" class="nav-item flex items-center gap-3 px-4 py-3 hover:bg-blue-800 rounded-lg text-sm font-medium transition">
+                <i class="fa-solid fa-chart-pie w-5 text-white shrink-0"></i> <span class="sidebar-label">สถิติ</span>
             </a>
         </nav>
+        <div class="p-4 border-t border-blue-800">
+            <button onclick="toggleSidebar()" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-blue-200 hover:bg-blue-800 hover:text-white transition text-sm">
+                <i id="sidebarToggleIcon" class="fa-solid fa-angles-left"></i> <span class="sidebar-label">ย่อเมนู</span>
+            </button>
+        </div>
     </aside>
 
-    <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
         <!-- Header -->
-        <header class="bg-white px-6 py-4 shadow-sm flex justify-between items-center z-10">
-            <div class="flex items-center gap-4">
-                <button onclick="toggleSidebar()" class="text-slate-500 hover:text-blue-600 focus:outline-none transition"><i class="fa-solid fa-bars text-xl"></i></button>
-                <h2 class="text-2xl font-bold text-slate-800">งานเฝ้าระวังอาการไม่พึงประสงค์</h2>
+        <header class="bg-white px-8 py-4 shadow-sm flex justify-between items-center z-0">
+            <div>
+                <h2 id="pageHeaderTitle" class="text-2xl font-bold text-slate-800">งานเฝ้าระวังอาการไม่พึงประสงค์</h2>
+                <p id="pageHeaderSubtitle" class="text-xs text-slate-400 mt-0.5">Adverse Drug Reaction Surveillance Program</p>
             </div>
-            <div class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full hidden sm:block">
-                <i class="fa-solid fa-clock text-blue-500 mr-1"></i> อัปเดตล่าสุด: <span id="lastUpdateTime" class="font-medium text-slate-700">-</span>
+            <div class="flex items-center gap-3">
+                <div id="unreadBell" class="hidden relative text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-full border border-red-100 items-center gap-1.5">
+                    <i class="fa-solid fa-bell"></i> <span id="unreadBellCount">0</span> ผลประเมินใหม่
+                </div>
+                <div class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                    <i class="fa-solid fa-clock text-blue-500 mr-1"></i> อัปเดตล่าสุด: <span id="lastUpdateTime" class="font-medium text-slate-700">-</span>
+                </div>
             </div>
         </header>
 
-        <!-- โซนจัดการผู้ป่วย (Dashboard) -->
-        <div id="view-dashboard" class="p-8 flex-1 overflow-y-auto bg-slate-50 no-scrollbar">
-            <!-- Summary Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shrink-0"><i class="fa-solid fa-hospital-user"></i></div>
-                    <div><p class="text-xs text-slate-500">ผู้ป่วยทั้งหมด</p><p class="text-xl font-bold" id="countTotal">0</p></div>
-                </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-red-500">
-                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center shrink-0"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    <div><p class="text-xs text-slate-500">เสี่ยงสูง</p><p class="text-xl font-bold text-red-600" id="countHighRisk">0</p></div>
-                </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-orange-500">
-                    <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center shrink-0"><i class="fa-solid fa-bell-slash"></i></div>
-                    <div><p class="text-xs text-slate-500">ขาดประเมิน (>24ชม)</p><p class="text-xl font-bold text-orange-600" id="countOverdue">0</p></div>
-                </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-yellow-500">
-                    <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center shrink-0"><i class="fa-solid fa-clock-rotate-left"></i></div>
-                    <div><p class="text-xs text-slate-500">รอประเมิน</p><p class="text-xl font-bold text-yellow-600" id="countPending">0</p></div>
-                </div>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-green-500">
-                    <div class="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center shrink-0"><i class="fa-solid fa-check-double"></i></div>
-                    <div><p class="text-xs text-slate-500">ปกติ/ติดตามแล้ว</p><p class="text-xl font-bold text-green-600" id="countNormal">0</p></div>
-                </div>
-            </div>
+        <!-- Content Area -->
+        <div class="p-8 flex-1 overflow-y-auto bg-slate-50 no-scrollbar">
 
-            <!-- Table Controls -->
-            <div class="flex justify-between items-center mb-4 gap-4 flex-wrap">
-                <div class="flex gap-2 flex-1 min-w-[300px]">
-                    <div class="relative w-full max-w-sm">
-                        <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="ค้นหา HN, ชื่อ, ยา..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 shadow-sm">
+            <!-- ============ PATIENTS VIEW ============ -->
+            <div id="view-patients" class="view-section active">
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-6 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-hospital-user"></i></div>
+                        <div><p class="text-xs text-slate-500">ผู้ป่วยทั้งหมด</p><p class="text-xl font-bold" id="countTotal">0</p></div>
                     </div>
-                    <select id="statusFilter" onchange="handleSearch()" class="border border-slate-300 rounded-lg px-4 py-2 text-sm outline-none focus:border-blue-500 bg-white shadow-sm">
-                        <option value="">ทุกสถานะ</option>
-                        <option value="เสี่ยงสูง">เสี่ยงสูง</option>
-                        <option value="เลยกำหนด 24 ชม.">เลยกำหนด 24 ชม.</option>
-                        <option value="รอตอบแบบประเมิน">รอตอบแบบประเมิน</option>
-                        <option value="ลงทะเบียนแล้ว">ลงทะเบียนแล้ว (ปกติ)</option>
-                    </select>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-red-500">
+                        <div class="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div><p class="text-xs text-slate-500">เสี่ยงสูง</p><p class="text-xl font-bold text-red-600" id="countHighRisk">0</p></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-orange-500 relative overflow-hidden">
+                        <div class="absolute -right-2 -top-2 w-12 h-12 bg-orange-50 rounded-full z-0"></div>
+                        <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center z-10"><i class="fa-solid fa-bell-slash"></i></div>
+                        <div class="z-10"><p class="text-xs text-slate-500">ตอบช้า >24ชม.</p><p class="text-xl font-bold text-orange-600" id="countOverdue">0</p></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-yellow-500">
+                        <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <div><p class="text-xs text-slate-500">รอประเมิน</p><p class="text-xl font-bold text-yellow-600" id="countPending">0</p></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-green-500">
+                        <div class="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-check-double"></i></div>
+                        <div><p class="text-xs text-slate-500">ปกติ/ติดตามแล้ว</p><p class="text-xl font-bold text-green-600" id="countNormal">0</p></div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-indigo-500">
+                        <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center"><i class="fa-solid fa-bell"></i></div>
+                        <div><p class="text-xs text-slate-500">ผลประเมินใหม่</p><p class="text-xl font-bold text-indigo-600" id="countUnread">0</p></div>
+                    </div>
                 </div>
-                <button onclick="toggleModal('addPatientModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm flex items-center gap-2 transition whitespace-nowrap">
-                    <i class="fa-solid fa-user-plus"></i> ลงทะเบียนผู้ป่วย
-                </button>
+
+                <!-- Table Controls -->
+                <div class="flex justify-between items-center mb-4 gap-4">
+                    <div class="flex gap-2 flex-1">
+                        <div class="relative w-72">
+                            <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="ค้นหา HN, ชื่อ, ยา..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:border-blue-500 shadow-sm">
+                        </div>
+                        <select id="statusFilter" onchange="handleSearch()" class="border border-slate-300 rounded-lg px-4 py-2 text-sm outline-none focus:border-blue-500 bg-white shadow-sm">
+                            <option value="">ทุกสถานะ</option>
+                            <option value="เสี่ยงสูง">เสี่ยงสูง</option>
+                            <option value="เลยกำหนด 24 ชม.">เลยกำหนด 24 ชม.</option>
+                            <option value="รอตอบแบบประเมิน">รอตอบแบบประเมิน</option>
+                            <option value="ลงทะเบียนแล้ว">ลงทะเบียนแล้ว (ปกติ)</option>
+                        </select>
+                    </div>
+                    <button onclick="toggleModal('addPatientModal')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center gap-2 transition">
+                        <i class="fa-solid fa-user-plus"></i> ลงทะเบียนผู้ป่วย
+                    </button>
+                </div>
+
+                <!-- Patient Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-sm">
+                                <th class="px-6 py-4 font-semibold">HN</th>
+                                <th class="px-6 py-4 font-semibold">ชื่อ - นามสกุล</th>
+                                <th class="px-6 py-4 font-semibold">ยาที่ได้รับ</th>
+                                <th class="px-6 py-4 font-semibold text-center">สถานะ</th>
+                                <th class="px-6 py-4 font-semibold text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientTableBody" class="text-sm divide-y divide-slate-100">
+                            <!-- โหลดข้อมูล -->
+                        </tbody>
+                    </table>
+                    <div class="px-6 py-4 flex justify-between items-center bg-slate-50 border-t">
+                        <span id="pageInfo" class="text-sm text-slate-500">แสดง 0 รายการ</span>
+                        <div class="flex gap-1" id="paginationControls"></div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Patient Table -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-sm">
-                            <th class="px-6 py-4 font-semibold">HN</th>
-                            <th class="px-6 py-4 font-semibold">ชื่อ - นามสกุล</th>
-                            <th class="px-6 py-4 font-semibold">ยาที่ได้รับ</th>
-                            <th class="px-6 py-4 font-semibold text-center">สถานะ</th>
-                            <th class="px-6 py-4 font-semibold text-center">จัดการ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="patientTableBody" class="text-sm divide-y divide-slate-100">
-                        <tr><td colspan="5" class="p-8 text-center text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังโหลดข้อมูล...</td></tr>
-                    </tbody>
-                </table>
-                <div class="px-6 py-4 flex justify-between items-center bg-slate-50 border-t">
-                    <span id="pageInfo" class="text-sm text-slate-500">แสดง 0 รายการ</span>
-                    <div class="flex gap-1" id="paginationControls"></div>
+            <!-- ============ STATISTICS VIEW ============ -->
+            <div id="view-stats" class="view-section">
+                <div class="grid grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm col-span-1">
+                        <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-blue-600"></i> สัดส่วนสถานะผู้ป่วย</h4>
+                        <canvas id="statusChart" height="220"></canvas>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm col-span-2">
+                        <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-pills text-blue-600"></i> จำนวนผู้ป่วยแยกตามยาที่เฝ้าระวัง</h4>
+                        <canvas id="drugChart" height="140"></canvas>
+                    </div>
                 </div>
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm text-center">
+                        <p class="text-xs text-slate-500 mb-1">ผู้ป่วยทั้งหมดในระบบ</p>
+                        <p class="text-3xl font-bold text-slate-800" id="statTotal">0</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm text-center">
+                        <p class="text-xs text-slate-500 mb-1">อัตราการตอบแบบประเมิน</p>
+                        <p class="text-3xl font-bold text-blue-600" id="statResponseRate">0%</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm text-center">
+                        <p class="text-xs text-slate-500 mb-1">ผู้ป่วยเสี่ยงสูงสะสม</p>
+                        <p class="text-3xl font-bold text-red-600" id="statHighRisk">0</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm text-center">
+                        <p class="text-xs text-slate-500 mb-1">ค้างตอบเกิน 24 ชม.</p>
+                        <p class="text-3xl font-bold text-orange-600" id="statOverdue">0</p>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-6"><i class="fa-solid fa-circle-info mr-1"></i> สถิติคำนวณจากข้อมูลผู้ป่วยที่โหลดล่าสุด ณ เวลา <span id="statsUpdatedAt">-</span></p>
             </div>
-        </div>
 
-        <!-- โซนสถิติ (Statistics) ซ่อนเป็นค่าเริ่มต้น -->
-        <div id="view-stats" class="p-8 flex-1 overflow-y-auto bg-slate-50 no-scrollbar hidden">
-            <h3 class="text-xl font-bold text-slate-800 mb-6"><i class="fa-solid fa-chart-line text-blue-600 mr-2"></i> สถิติการประเมิน (กำลังพัฒนา)</h3>
-            <div class="bg-white p-10 rounded-xl border border-slate-200 shadow-sm text-center">
-                <i class="fa-solid fa-hammer text-4xl text-slate-300 mb-4"></i>
-                <p class="text-slate-500">หน้านี้เตรียมไว้สำหรับแสดงกราฟสถิติในอนาคต<br>สามารถเชื่อมต่อกับ Chart.js ได้เลย</p>
-            </div>
         </div>
     </main>
 
     <!-- Modal: ลงทะเบียนผู้ป่วยใหม่ -->
     <div id="addPatientModal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-notes-medical text-blue-600 mr-2"></i>ลงทะเบียนผู้ป่วยใหม่</h3>
-                <button type="button" onclick="toggleModal('addPatientModal')" class="text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-[#1e3a8a] to-blue-700">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-notes-medical"></i>ลงทะเบียนผู้ป่วยใหม่</h3>
+                <button type="button" onclick="toggleModal('addPatientModal')" class="text-blue-200 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             <form id="addPatientForm" onsubmit="submitForm(event)" class="p-6">
-                <div class="grid grid-cols-2 gap-4 mb-4">
+
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">ข้อมูลผู้ป่วย</p>
+                <div class="grid grid-cols-2 gap-4 mb-5">
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-slate-700">HN</label>
-                        <input type="text" id="hn" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium mb-1 text-slate-700"><i class="fa-solid fa-id-card text-slate-400 w-4"></i> HN</label>
+                        <input type="text" id="hn" required class="w-full px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-slate-700">เบอร์โทรศัพท์</label>
-                        <input type="tel" id="addPhone" placeholder="08x-xxx-xxxx" class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium mb-1 text-slate-700"><i class="fa-solid fa-phone text-slate-400 w-4"></i> เบอร์โทรศัพท์</label>
+                        <input type="tel" id="phone" pattern="[0-9\-\s]{9,15}" placeholder="08X-XXX-XXXX" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-sm font-medium mb-1 text-slate-700"><i class="fa-solid fa-user text-slate-400 w-4"></i> ชื่อ - นามสกุล</label>
+                        <input type="text" id="patientName" required class="w-full px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-slate-700">วันที่เริ่มยา</label>
-                        <input type="date" id="startDate" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium mb-1 text-slate-700"><i class="fa-regular fa-calendar text-slate-400 w-4"></i> วันที่เริ่มยา</label>
+                        <input type="date" id="startDate" required class="w-full px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
                     </div>
                     <div>
-                        <label class="block text-sm font-bold mb-1 text-slate-700">ยาที่เฝ้าระวัง (SCARs)</label>
-                        <select id="drug" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <label class="block text-sm font-medium mb-1 text-slate-700"><i class="fa-solid fa-capsules text-slate-400 w-4"></i> ยาที่เฝ้าระวัง (SCARs)</label>
+                        <select id="drug" required class="w-full px-3 py-2.5 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition">
                             <option value="">เลือกยา...</option>
                             <option value="Allopurinol">Allopurinol</option>
                             <option value="Carbamazepine">Carbamazepine</option>
                             <option value="Phenytoin">Phenytoin</option>
                         </select>
                     </div>
-                    <div class="col-span-2">
-                        <label class="block text-sm font-bold mb-1 text-slate-700">ชื่อ - นามสกุล</label>
-                        <input type="text" id="patientName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <!-- เปลี่ยน textarea เป็น input ให้ขนาดพอดีกับช่องอื่น -->
-                    <div class="col-span-2">
-                        <label class="block text-sm font-bold mb-1 text-slate-700 text-red-600"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ประวัติแพ้ยาเดิมและอาการ (ถ้ามี)</label>
-                        <input type="text" id="allergyHistory" placeholder="เช่น Amoxicillin (มีผื่นแดง), ไม่มี" class="w-full px-3 py-2 border border-red-200 bg-red-50 rounded-lg outline-none focus:ring-2 focus:ring-red-500">
-                    </div>
                 </div>
+
+                <p class="text-xs font-bold text-red-400 uppercase tracking-wide mb-3">ประวัติแพ้ยา</p>
+                <div class="mb-2">
+                    <label class="block text-sm font-medium mb-1 text-slate-700"><i class="fa-solid fa-triangle-exclamation text-red-500 w-4"></i> ประวัติแพ้ยาเดิมและอาการ (ถ้ามี)</label>
+                    <textarea id="allergyHistory" rows="3" placeholder="ระบุชื่อยาที่เคยแพ้ และลักษณะอาการ..." class="w-full px-3 py-2.5 border border-red-200 bg-red-50 rounded-lg outline-none focus:ring-2 focus:ring-red-500 focus:border-red-400 resize-none transition"></textarea>
+                </div>
+
                 <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-                    <button type="button" onclick="toggleModal('addPatientModal')" class="px-4 py-2 border rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">ยกเลิก</button>
-                    <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition">บันทึกข้อมูล</button>
+                    <button type="button" onclick="toggleModal('addPatientModal')" class="px-4 py-2 border rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">ยกเลิก</button>
+                    <button type="submit" id="submitBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm transition">บันทึกข้อมูล</button>
                 </div>
             </form>
         </div>
@@ -184,97 +238,143 @@
 
     <!-- Modal: แฟ้มประวัติผู้ป่วย -->
     <div id="patientDetailsModal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-white w-full max-w-6xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 95vh;">
-            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800 text-white shrink-0">
-                <div class="flex items-center gap-3">
-                    <h3 class="text-lg font-bold"><i class="fa-regular fa-folder-open text-blue-400 mr-2"></i> แฟ้มประวัติและการติดตาม</h3>
-                    <span id="unreadBadgeTop" class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">มีการประเมินใหม่</span>
-                </div>
+        <div class="bg-white w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 95vh;">
+            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800 text-white">
+                <h3 class="text-lg font-bold"><i class="fa-regular fa-folder-open text-blue-400 mr-2"></i> แฟ้มประวัติและการติดตามผู้ป่วย</h3>
                 <button type="button" onclick="toggleModal('patientDetailsModal')" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
             </div>
-            
-            <div class="flex-1 overflow-hidden flex flex-col md:flex-row bg-slate-50">
-                
-                <!-- คอลัมน์ซ้าย: ข้อมูลทั่วไป & QR -->
-                <div class="w-full md:w-1/3 p-6 border-r border-slate-200 overflow-y-auto bg-white">
-                    <div class="text-center mb-6">
-                        <img id="detailQR" src="" alt="QR Code" class="w-32 h-32 mx-auto mb-3 border p-1 rounded-lg shadow-sm bg-white">
-                        <p class="text-xs text-slate-500 mb-4">สแกนเพื่อทำแบบประเมิน</p>
-                        <h4 id="detailName" class="font-bold text-lg text-slate-800">ชื่อ-สกุล</h4>
-                        <p id="detailHN" class="text-sm font-bold text-blue-600 mb-2">HN: -</p>
-                        <div id="detailStatus"></div>
-                    </div>
-                    
-                    <div class="space-y-3 mb-6">
-                        <div class="bg-slate-50 p-3 rounded-lg text-sm border border-slate-100 flex justify-between items-center">
-                            <span class="text-slate-500"><i class="fa-solid fa-phone w-4 text-slate-400"></i> เบอร์โทร:</span>
-                            <span id="detailPhone" class="font-bold text-slate-700">-</span>
-                        </div>
-                        <div class="bg-slate-50 p-3 rounded-lg text-sm border border-slate-100 flex justify-between items-center">
-                            <span class="text-slate-500"><i class="fa-solid fa-pills w-4 text-slate-400"></i> ยาที่ได้รับ:</span>
-                            <span id="detailDrug" class="font-bold text-slate-700">-</span>
-                        </div>
-                        <div class="bg-red-50 p-3 rounded-lg text-sm border border-red-100">
-                            <p class="text-red-700 font-bold mb-1"><i class="fa-solid fa-triangle-exclamation"></i> ประวัติแพ้ยาเดิม:</p>
-                            <p id="detailHistory" class="text-red-600">-</p>
-                        </div>
-                    </div>
 
-                    <!-- ปุ่มกรองวันที่ -->
-                    <h5 class="text-sm font-bold text-slate-700 mb-2"><i class="fa-regular fa-calendar-check text-blue-500"></i> กำหนดการ (คลิกเพื่อดูประวัติ)</h5>
-                    <div class="space-y-2 mb-6">
-                        <button onclick="filterTimeline('all')" class="w-full flex justify-between items-center p-2 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition text-sm">
-                            <span class="font-bold text-slate-600">ดูประวัติทั้งหมด</span>
-                        </button>
-                        <button onclick="filterTimeline('7')" class="w-full flex justify-between items-center p-2 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition text-sm">
-                            <span class="font-medium text-slate-600">Day 7</span><span id="date7" class="text-blue-700 font-bold">-</span>
-                        </button>
-                        <button onclick="filterTimeline('14')" class="w-full flex justify-between items-center p-2 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition text-sm">
-                            <span class="font-medium text-slate-600">Day 14</span><span id="date14" class="text-blue-700 font-bold">-</span>
-                        </button>
-                        <button onclick="filterTimeline('42')" class="w-full flex justify-between items-center p-2 rounded-lg border border-slate-200 hover:border-blue-500 hover:bg-blue-50 transition text-sm">
-                            <span class="font-medium text-slate-600">Week 6</span><span id="date42" class="text-blue-700 font-bold">-</span>
-                        </button>
-                    </div>
+            <div class="p-6 flex-1 overflow-y-auto grid grid-cols-12 gap-6 bg-slate-100/50">
 
-                    <button onclick="printA5PDF()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition">
-                        <i class="fa-solid fa-print"></i> พิมพ์หน้าสมุด (PDF)
-                    </button>
-                </div>
-
-                <!-- คอลัมน์ขวา: แท็บประวัติ -->
-                <div class="w-full md:w-2/3 flex flex-col h-full bg-slate-50">
-                    <!-- Tab Headers -->
-                    <div class="flex border-b border-slate-200 bg-white shrink-0 px-4 pt-2 gap-2">
-                        <button onclick="switchTab('assessments')" id="tab-btn-assessments" class="px-6 py-3 font-bold text-blue-600 border-b-2 border-blue-600 flex items-center gap-2">
-                            <i class="fa-solid fa-mobile-screen-button"></i> ประวัติจากคนไข้
-                        </button>
-                        <button onclick="switchTab('notes')" id="tab-btn-notes" class="px-6 py-3 font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent flex items-center gap-2">
-                            <i class="fa-solid fa-user-doctor"></i> บันทึกเภสัชกร
-                        </button>
-                    </div>
-
-                    <!-- Tab Content: Timeline คนไข้ -->
-                    <div id="tab-content-assessments" class="flex-1 p-6 overflow-y-auto">
-                        <div id="assessmentTimeline" class="timeline-container">
-                            <!-- JS จะใส่เนื้อหา Timeline อาการ + อาการเพิ่มเติม ตรงนี้ -->
+                <!-- คอลัมน์ 1: ข้อมูลทั่วไป & QR -->
+                <div class="col-span-3 space-y-4">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="text-center mb-4">
+                            <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl border border-blue-100"><i class="fa-solid fa-user"></i></div>
+                            <h4 id="detailName" class="font-bold text-lg text-slate-800">ชื่อ-สกุล</h4>
+                            <p id="detailHN" class="text-sm text-slate-500 font-mono">HN: -</p>
+                            <div id="detailStatus" class="mt-3"></div>
                         </div>
-                    </div>
-
-                    <!-- Tab Content: ฟอร์มเภสัชกร -->
-                    <div id="tab-content-notes" class="flex-1 p-6 overflow-y-auto hidden flex-col">
-                        <div id="pharmacistNotesHistory" class="flex-1 overflow-y-auto space-y-3 mb-4 pr-2">
-                            <!-- JS จะใส่ประวัติการบันทึกของเภสัชตรงนี้ -->
+                        <div class="bg-slate-50 p-3 rounded-lg text-sm space-y-2 mb-3 border border-slate-100">
+                            <p class="flex justify-between"><span class="text-slate-500">ยาที่ได้รับ:</span> <span id="detailDrug" class="font-medium text-slate-800"></span></p>
+                            <p class="flex justify-between"><span class="text-slate-500">เบอร์โทร:</span> <span id="detailPhone" class="font-medium text-slate-800">-</span></p>
+                            <p class="flex justify-between"><span class="text-slate-500">เริ่มยา:</span> <span id="detailDate" class="font-medium text-slate-800"></span></p>
                         </div>
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm shrink-0">
-                            <label class="block text-sm font-bold text-slate-700 mb-2"><i class="fa-solid fa-pen-to-square text-blue-500 mr-1"></i> เพิ่มบันทึกการติดตามใหม่</label>
-                            <textarea id="pharmacistNoteInput" rows="2" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:border-blue-500 mb-3 text-sm" placeholder="พิมพ์สรุปอาการ, คำแนะนำ หรือการจัดการ..."></textarea>
-                            <button id="saveNoteBtn" onclick="savePharmacistNote()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg shadow-sm transition flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-save"></i> บันทึกข้อมูล (ลงวันที่อัตโนมัติ)
+                        <div class="bg-red-50 p-3 rounded-lg text-xs space-y-1 border border-red-100 mb-4">
+                            <p class="font-bold text-red-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ประวัติแพ้ยาเดิม:</p>
+                            <p id="detailHistory" class="text-red-600">- (รอข้อมูล)</p>
+                        </div>
+
+                        <div class="border-t pt-4 text-center">
+                            <img id="detailQR" src="" alt="QR Code" class="w-28 h-28 mx-auto mb-3 border p-1 rounded-lg shadow-sm bg-white">
+                            <button onclick="printA5PDF()" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition">
+                                <i class="fa-solid fa-print"></i> สร้างสมุด (PDF)
                             </button>
                         </div>
                     </div>
+                </div>
 
+                <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ และ วันที่นัด -->
+                <div class="col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+                    <div class="flex items-center justify-between border-b pb-3 mb-4">
+                        <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-mobile-screen-button text-blue-600"></i> ข้อมูลการประเมิน
+                        </h4>
+                        <div id="detailUnreadBadge" class="hidden text-xs text-red-600 font-semibold bg-red-50 px-2 py-1 rounded-full border border-red-100">
+                            <span class="unread-dot"></span><span id="detailUnreadCount">0</span> ใหม่
+                        </div>
+                    </div>
+
+                    <!-- ปฏิทินที่ต้องติดตาม (คลิกได้) -->
+                    <div class="mb-4">
+                        <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-regular fa-calendar text-blue-500"></i> กำหนดการติดตามอาการ (คลิกเพื่อดูผล)</p>
+                        <div class="flex text-center text-xs gap-2">
+                            <div id="quickTab7" onclick="selectQuickTab(7)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
+                                <p class="font-bold text-blue-800 quick-tab-label">Day 7</p><span id="date7" class="text-slate-600 font-medium quick-tab-date"></span>
+                            </div>
+                            <div id="quickTab14" onclick="selectQuickTab(14)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
+                                <p class="font-bold text-slate-700 quick-tab-label">Day 14</p><span id="date14" class="text-slate-500 quick-tab-date"></span>
+                            </div>
+                            <div id="quickTab42" onclick="selectQuickTab(42)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
+                                <p class="font-bold text-slate-700 quick-tab-label">Week 6</p><span id="date42" class="text-slate-500 quick-tab-date"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- เลือกดูตามวันที่ / ประวัติทั้งหมด -->
+                    <div class="mb-4">
+                        <label class="text-xs font-bold text-slate-500 mb-1 block uppercase"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> ประวัติการประเมินทั้งหมด (เรียงล่าสุดก่อน)</label>
+                        <select id="assessmentDateSelect" onchange="onAssessmentDateSelect()" class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white text-sm font-medium"></select>
+                    </div>
+
+                    <!-- เวลาบันทึก/ประเมิน -->
+                    <div class="mb-4 space-y-1 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs shadow-inner">
+                        <p class="flex justify-between text-slate-600"><span class="font-semibold"><i class="fa-solid fa-notes-medical text-slate-400 w-4"></i> ลงทะเบียน:</span> <span id="timeRegister">-</span></p>
+                        <p class="flex justify-between text-slate-600"><span class="font-semibold"><i class="fa-solid fa-check-double text-slate-400 w-4"></i> ผู้ป่วยตอบประเมิน (รายการที่เลือก):</span> <span id="timeAssess" class="font-bold text-blue-700">-</span></p>
+                    </div>
+
+                    <!-- พื้นที่แสดงอาการที่ติ๊ก -->
+                    <div id="assessmentContent" class="flex-1 overflow-y-auto pr-2 custom-scrollbar border-t border-slate-100 pt-3">
+                        <!-- ถูกสร้างโดย JS -->
+                    </div>
+                </div>
+
+                <!-- คอลัมน์ 3: ฟอร์มติดตามสำหรับเภสัชกร -->
+                <div class="col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                    <h4 class="font-bold text-slate-800 border-b pb-3 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-user-doctor text-blue-600"></i> บันทึกโดยเภสัชกร
+                    </h4>
+
+                    <form id="pharmacistNoteForm" class="space-y-4 text-sm">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-slate-600 mb-1 font-medium">ระยะเวลาติดตาม</label>
+                                <select id="noteFollowPeriod" class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-blue-50 font-semibold text-blue-800">
+                                    <option value="1w">Day 7 (สัปดาห์ 1)</option>
+                                    <option value="2w">Day 14 (สัปดาห์ 2)</option>
+                                    <option value="6w">Week 6</option>
+                                    <option value="other">เพิ่มเติม/ฉุกเฉิน</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 mb-1 font-medium">วิธีการติดตาม</label>
+                                <select id="followMethod" onchange="toggleOtherMethod()" class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+                                    <option value="phone">โทรศัพท์</option>
+                                    <option value="visit">มารพ. (In-person)</option>
+                                    <option value="line">ผ่าน LINE</option>
+                                    <option value="other">อื่นๆ (ระบุ)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <input type="text" id="followMethodOther" placeholder="ระบุวิธีการติดตาม..." class="hidden w-full p-2 border rounded-lg outline-none focus:border-blue-500 bg-slate-50">
+
+                        <div>
+                            <label class="block text-slate-600 mb-1 font-medium">สรุปการสนทนา / อาการ</label>
+                            <textarea id="noteSummary" rows="2" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:border-blue-500" placeholder="บันทึกอาการที่ผู้ป่วยแจ้ง..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-600 mb-1 font-medium">คำแนะนำที่ให้ (Intervention)</label>
+                            <textarea id="noteRecommendation" rows="2" class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:border-blue-500" placeholder="เช่น แนะนำให้หยุดยา, นัดพบแพทย์..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-600 mb-1 font-medium">ผู้บันทึก</label>
+                            <input type="text" id="noteRecorder" class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500" placeholder="ระบุชื่อ หรือ รหัสพนักงาน">
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100">
+                            <button type="button" id="saveNoteBtn" onclick="savePharmacistNote()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-sm">
+                                <i class="fa-solid fa-save"></i> บันทึกประวัติ
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- ประวัติการบันทึกของเภสัชกร (ย้อนหลัง) -->
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-solid fa-list-check text-blue-500"></i> ประวัติการติดตามที่บันทึกไว้</p>
+                        <div id="pharmacistNoteHistory" class="space-y-2 max-h-56 overflow-y-auto pr-1 text-xs"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -284,72 +384,137 @@
         // ⚠️ การตั้งค่า URL
         const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBDF7UHDU6o9ZgRm2Pj-vCXsdjgX_0RLOXBpPv4AaPKSwQuuDSOO9Vk3pog2LS866x/exec';
         const LIFF_URL_BASE = 'https://liff.line.me/2010995687-3szXwNXK?hn=';
-        
+
         let allPatientsData = [];
         let filteredData = [];
         let currentPage = 1;
-        const rowsPerPage = 10; 
-        let currentModalHN = "";
+        const rowsPerPage = 10;
+        let sidebarCollapsed = false;
+        let currentView = 'patients';
 
-        // ---- UI Controls ----
+        // In-memory store keyed by HN for pharmacist notes and viewed-state overrides.
+        // NOTE: The current Google Apps Script backend only supports adding patients (action:
+        // 'add_patient'). Pharmacist follow-up notes and per-assessment "viewed" state are kept
+        // client-side here for now (payloads are still POSTed with an 'add_note' action so the
+        // backend can be extended later to persist them permanently).
+        const pharmacistNotesStore = {};   // { [hn]: [{date, followPeriod, followMethod, summary, recommendation, recorder}] }
+        const viewedOverrides = {};        // { [hn]: { [entryDate]: true } }
+
+        let currentPatientRow = null;
+        let currentAssessmentHistory = [];
+        let currentAssessmentIndex = -1;
+        let statusChartInstance = null;
+        let drugChartInstance = null;
+
+        // ---------- Sidebar / View switching ----------
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('sidebar-closed');
+            sidebarCollapsed = !sidebarCollapsed;
+            const sidebar = document.getElementById('sidebar');
+            const icon = document.getElementById('sidebarToggleIcon');
+            if (sidebarCollapsed) {
+                sidebar.classList.add('sidebar-collapsed');
+                sidebar.classList.remove('w-64');
+                sidebar.classList.add('w-20');
+                icon.classList.remove('fa-angles-left');
+                icon.classList.add('fa-angles-right');
+            } else {
+                sidebar.classList.remove('sidebar-collapsed');
+                sidebar.classList.remove('w-20');
+                sidebar.classList.add('w-64');
+                icon.classList.remove('fa-angles-right');
+                icon.classList.add('fa-angles-left');
+            }
         }
 
-        function switchMenu(menuName) {
-            document.getElementById('view-dashboard').classList.add('hidden');
-            document.getElementById('view-stats').classList.add('hidden');
-            document.getElementById('view-' + menuName).classList.remove('hidden');
-            
-            document.getElementById('menu-dashboard').classList.remove('bg-blue-700', 'text-white');
-            document.getElementById('menu-dashboard').classList.add('text-blue-100');
-            document.getElementById('menu-stats').classList.remove('bg-blue-700', 'text-white');
-            document.getElementById('menu-stats').classList.add('text-blue-100');
-            
-            document.getElementById('menu-' + menuName).classList.add('bg-blue-700', 'text-white');
-            document.getElementById('menu-' + menuName).classList.remove('text-blue-100');
+        function switchView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(el => {
+                if (el.dataset.nav === view) {
+                    el.classList.add('bg-blue-700', 'shadow-inner');
+                    el.classList.remove('hover:bg-blue-800');
+                } else {
+                    el.classList.remove('bg-blue-700', 'shadow-inner');
+                    el.classList.add('hover:bg-blue-800');
+                }
+            });
+
+            if (view === 'patients') {
+                document.getElementById('pageHeaderTitle').innerText = 'งานเฝ้าระวังอาการไม่พึงประสงค์';
+                document.getElementById('pageHeaderSubtitle').innerText = 'Adverse Drug Reaction Surveillance Program';
+            } else if (view === 'stats') {
+                document.getElementById('pageHeaderTitle').innerText = 'ภาพรวมสถิติ';
+                document.getElementById('pageHeaderSubtitle').innerText = 'Adverse Event Surveillance — Statistics';
+                renderStatsView();
+            }
         }
 
-        function switchTab(tabName) {
-            document.getElementById('tab-content-assessments').classList.add('hidden');
-            document.getElementById('tab-content-notes').classList.add('hidden');
-            document.getElementById('tab-content-' + tabName).classList.remove('hidden');
-            
-            document.getElementById('tab-btn-assessments').classList.replace('text-blue-600', 'text-slate-500');
-            document.getElementById('tab-btn-assessments').classList.replace('border-blue-600', 'border-transparent');
-            document.getElementById('tab-btn-notes').classList.replace('text-blue-600', 'text-slate-500');
-            document.getElementById('tab-btn-notes').classList.replace('border-blue-600', 'border-transparent');
-            
-            document.getElementById('tab-btn-' + tabName).classList.replace('text-slate-500', 'text-blue-600');
-            document.getElementById('tab-btn-' + tabName).classList.replace('border-transparent', 'border-blue-600');
+        function toggleOtherMethod() {
+            const method = document.getElementById('followMethod').value;
+            const otherInput = document.getElementById('followMethodOther');
+            method === 'other' ? otherInput.classList.remove('hidden') : otherInput.classList.add('hidden');
         }
 
         function toggleModal(modalID) { document.getElementById(modalID).classList.toggle("hidden"); }
 
-        function getStatusBadge(status, hasUnread = false) {
-            let badgeHtml = hasUnread ? '<span class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>' : '';
-            
-            if(status === 'เลยกำหนด 24 ชม.') return `<span class="relative bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold border border-orange-200"><i class="fa-solid fa-bell-slash mr-1"></i>เลยกำหนด 24 ชม.${badgeHtml}</span>`;
-            if(status === 'ลงทะเบียนแล้ว') return `<span class="relative bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-solid fa-check mr-1"></i>ลงทะเบียนแล้ว${badgeHtml}</span>`;
-            if(status === 'รอตอบแบบประเมิน') return `<span class="relative bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-regular fa-clock mr-1"></i>รอประเมิน${badgeHtml}</span>`;
-            if(status === 'เสี่ยงสูง') return `<span class="relative bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse border border-red-200"><i class="fa-solid fa-triangle-exclamation mr-1"></i>เสี่ยงสูง${badgeHtml}</span>`;
-            if(status === 'ปกติ') return `<span class="relative bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200"><i class="fa-solid fa-shield-check mr-1"></i>ปกติ${badgeHtml}</span>`;
-            return `<span class="relative bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">${status}${badgeHtml}</span>`;
+        function getStatusBadge(status) {
+            if(status === 'เลยกำหนด 24 ชม.') return '<span class="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold border border-orange-200"><i class="fa-solid fa-bell-slash mr-1"></i>เลยกำหนด 24 ชม.</span>';
+            if(status === 'ลงทะเบียนแล้ว') return '<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-solid fa-check mr-1"></i>ลงทะเบียนแล้ว</span>';
+            if(status === 'รอตอบแบบประเมิน') return '<span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-regular fa-clock mr-1"></i>รอประเมิน</span>';
+            if(status === 'เสี่ยงสูง') return '<span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse border border-red-200"><i class="fa-solid fa-triangle-exclamation mr-1"></i>เสี่ยงสูง</span>';
+            return `<span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">${status}</span>`;
         }
 
-        // ---- Data Loading & Table ----
         async function loadData() {
             try {
                 const response = await fetch(GOOGLE_APP_SCRIPT_URL);
                 const newData = await response.json();
-                
+
                 if(JSON.stringify(newData) !== JSON.stringify(allPatientsData)) {
                     allPatientsData = newData;
-                    handleSearch(); 
+                    handleSearch();
                     updateSummaryCards();
+                    if (currentView === 'stats') renderStatsView();
                 }
                 document.getElementById('lastUpdateTime').innerText = new Date().toLocaleTimeString('th-TH') + ' น.';
             } catch (error) { console.error("Auto-refresh failed"); }
+        }
+
+        // ---------- Assessment history helpers ----------
+        // Normalizes a patient row's assessment data into a chronological array of entries.
+        // Prefers row.assessmentHistory (array) if the backend provides it; otherwise falls back
+        // to constructing a single entry from the legacy flat symp1-4 fields for backward compatibility.
+        function getAssessmentHistory(row) {
+            let history = [];
+            if (Array.isArray(row.assessmentHistory) && row.assessmentHistory.length > 0) {
+                history = row.assessmentHistory.slice();
+            } else if (row.status !== 'รอตอบแบบประเมิน' && row.status !== 'เลยกำหนด 24 ชม.') {
+                history = [{
+                    date: row.assessRawDate || row.rawDate,
+                    label: 'ล่าสุด',
+                    timestamp: row.assessTimestamp || 'ไม่มีข้อมูล',
+                    symp1: row.symp1, symp2: row.symp2, symp3: row.symp3, symp4: row.symp4,
+                    symp5: row.symp5 || null, symp5Text: row.symp5Text || '',
+                    photo2: row.photo2, photo3: row.photo3, photo4: row.photo4, photo5: row.photo5,
+                    viewed: true
+                }];
+            }
+            // sort newest first
+            history.sort((a, b) => new Date(b.date) - new Date(a.date));
+            // apply local viewed overrides
+            const overrides = viewedOverrides[row.hn] || {};
+            history.forEach(e => { if (overrides[e.date]) e.viewed = true; });
+            return history;
+        }
+
+        function countUnreadForRow(row) {
+            return getAssessmentHistory(row).filter(e => e.viewed === false).length;
+        }
+
+        function countTotalUnread() {
+            return allPatientsData.reduce((sum, row) => sum + countUnreadForRow(row), 0);
         }
 
         function updateSummaryCards() {
@@ -358,13 +523,25 @@
                 if(row.status === 'เสี่ยงสูง') highRisk++;
                 else if(row.status === 'รอตอบแบบประเมิน') pending++;
                 else if(row.status === 'เลยกำหนด 24 ชม.') overdue++;
-                else if(row.status === 'ลงทะเบียนแล้ว' || row.status === 'ปกติ') normal++;
+                else if(row.status === 'ลงทะเบียนแล้ว') normal++;
             });
+            const unread = countTotalUnread();
             document.getElementById('countTotal').innerText = allPatientsData.length;
             document.getElementById('countHighRisk').innerText = highRisk;
             document.getElementById('countPending').innerText = pending;
             document.getElementById('countOverdue').innerText = overdue;
             document.getElementById('countNormal').innerText = normal;
+            document.getElementById('countUnread').innerText = unread;
+
+            const bell = document.getElementById('unreadBell');
+            if (unread > 0) {
+                bell.classList.remove('hidden');
+                bell.classList.add('flex');
+                document.getElementById('unreadBellCount').innerText = unread;
+            } else {
+                bell.classList.add('hidden');
+                bell.classList.remove('flex');
+            }
         }
 
         function handleSearch() {
@@ -395,12 +572,17 @@
                     if(row.status === 'เสี่ยงสูง') tr.classList.add('bg-red-50/30');
                     if(row.status === 'เลยกำหนด 24 ชม.') tr.classList.add('bg-orange-50/30');
 
+                    const unreadCount = countUnreadForRow(row);
+                    const unreadTag = unreadCount > 0
+                        ? `<span class="inline-flex items-center gap-1 ml-2 text-[10px] font-bold text-red-600"><span class="unread-dot"></span>${unreadCount} ใหม่</span>`
+                        : '';
+
                     const rowDataStr = encodeURIComponent(JSON.stringify(row));
                     tr.innerHTML = `
                         <td class="px-6 py-4 font-mono text-slate-600">${row.hn}</td>
-                        <td class="px-6 py-4 font-medium text-slate-800">${row.name}</td>
+                        <td class="px-6 py-4 font-medium text-slate-800">${row.name}${unreadTag}</td>
                         <td class="px-6 py-4 text-slate-600">${row.drug}</td>
-                        <td class="px-6 py-4 text-center">${getStatusBadge(row.status, row.hasUnread)}</td>
+                        <td class="px-6 py-4 text-center">${getStatusBadge(row.status)}</td>
                         <td class="px-6 py-4 text-center">
                             <button onclick="openDetails('${rowDataStr}')" class="text-blue-600 hover:text-white border border-blue-600 hover:bg-blue-600 px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm">เปิดแฟ้มประวัติ</button>
                         </td>
@@ -415,7 +597,7 @@
             const controls = document.getElementById('paginationControls');
             let startCount = totalItems === 0 ? 0 : ((currentPage - 1) * rowsPerPage) + 1;
             document.getElementById('pageInfo').innerText = `แสดง ${startCount}-${Math.min(currentPage * rowsPerPage, totalItems)} จาก ${totalItems} รายการ`;
-            
+
             let html = `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-3 py-1 border rounded bg-white hover:bg-slate-50 disabled:opacity-50"><i class="fa-solid fa-chevron-left text-xs"></i></button>`;
             for(let i = 1; i <= totalPages; i++) html += `<button onclick="changePage(${i})" class="px-3 py-1 border rounded ${i === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-slate-600'}">${i}</button>`;
             html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-3 py-1 border rounded bg-white hover:bg-slate-50 disabled:opacity-50"><i class="fa-solid fa-chevron-right text-xs"></i></button>`;
@@ -423,165 +605,311 @@
         }
         function changePage(newPage) { currentPage = newPage; renderTable(); }
 
-        // ---- Patient Details & Modals ----
+        // คำนวณวันที่เพิ่มไป X วัน (คืนทั้งข้อความแสดงผล และวันที่ดิบ)
         function calculateFollowUpDate(rawDateStr, addDays) {
-            if(!rawDateStr) return "-";
+            if(!rawDateStr) return { display: "-", raw: null };
             const d = new Date(rawDateStr);
             d.setDate(d.getDate() + addDays);
-            return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+            return { display: d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }), raw: d };
         }
 
         function openDetails(rowDataStr) {
             const data = JSON.parse(decodeURIComponent(rowDataStr));
-            currentModalHN = data.hn;
-            
-            document.getElementById('detailHN').innerText = data.hn;
+            currentPatientRow = data;
+
+            document.getElementById('detailHN').innerText = "HN: " + data.hn;
             document.getElementById('detailName').innerText = data.name;
             document.getElementById('detailDrug').innerText = data.drug;
-            document.getElementById('detailPhone').innerText = data.phone || "-";
+            document.getElementById('detailPhone').innerText = data.phone || '-';
+            document.getElementById('detailDate').innerText = data.date;
             document.getElementById('detailStatus').innerHTML = getStatusBadge(data.status);
             document.getElementById('detailHistory').innerText = data.history || "-";
-            
+
             const fullLiffUrl = encodeURIComponent(LIFF_URL_BASE + data.hn);
             document.getElementById('detailQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fullLiffUrl}`;
-            
-            document.getElementById('date7').innerText = calculateFollowUpDate(data.rawDate, 7);
-            document.getElementById('date14').innerText = calculateFollowUpDate(data.rawDate, 14);
-            document.getElementById('date42').innerText = calculateFollowUpDate(data.rawDate, 42);
 
-            // แจ้งเตือน Badge สีแดง
-            const badgeTop = document.getElementById('unreadBadgeTop');
-            if(data.hasUnread) {
-                badgeTop.classList.remove('hidden');
-                // ดึง API แอบไปเคลียร์สถานะ Unread
-                fetch(GOOGLE_APP_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({action: 'mark_read', hn: data.hn})});
+            // กำหนดการ +7, +14, +42 วัน จากวันที่เริ่มยา (rawDate)
+            const d7 = calculateFollowUpDate(data.rawDate, 7);
+            const d14 = calculateFollowUpDate(data.rawDate, 14);
+            const d42 = calculateFollowUpDate(data.rawDate, 42);
+            document.getElementById('date7').innerText = d7.display;
+            document.getElementById('date14').innerText = d14.display;
+            document.getElementById('date42').innerText = d42.display;
+            window._quickTabTargets = { 7: d7.raw, 14: d14.raw, 42: d42.raw };
+
+            document.getElementById('timeRegister').innerText = data.regTimestamp || "ไม่มีข้อมูล";
+
+            // สร้างประวัติการประเมินทั้งหมด
+            currentAssessmentHistory = getAssessmentHistory(data);
+            populateAssessmentDropdown();
+            markQuickTabsData();
+
+            if (currentAssessmentHistory.length > 0) {
+                // เปิดรายการล่าสุด (หรือรายการที่ยังไม่ได้อ่านล่าสุด ถ้ามี)
+                let startIndex = currentAssessmentHistory.findIndex(e => e.viewed === false);
+                if (startIndex === -1) startIndex = 0;
+                renderAssessmentEntry(startIndex);
             } else {
-                badgeTop.classList.add('hidden');
+                document.getElementById('assessmentDateSelect').innerHTML = '<option>ยังไม่มีข้อมูลการประเมิน</option>';
+                document.getElementById('timeAssess').innerText = 'ยังไม่ประเมิน';
+                document.getElementById('detailUnreadBadge').classList.add('hidden');
+                document.getElementById('assessmentContent').innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12 mt-4">
+                        <i class="fa-regular fa-clock text-5xl mb-4 text-slate-200"></i>
+                        <p class="text-sm font-medium">ผู้ป่วยยังไม่ได้ทำแบบประเมิน</p>
+                    </div>
+                `;
+                clearQuickTabActive();
             }
 
-            // เรนเดอร์ Timeline และ บันทึกเภสัช
-            renderTimeline(data.assessments || []);
-            renderPharmacistNotes(data.notes || []);
-
-            switchTab('assessments');
+            renderPharmacistNoteHistory(data.hn);
             toggleModal('patientDetailsModal');
         }
 
-        function renderTimeline(assessments) {
-            const container = document.getElementById('assessmentTimeline');
-            if(assessments.length === 0) {
-                container.innerHTML = `
+        function populateAssessmentDropdown() {
+            const select = document.getElementById('assessmentDateSelect');
+            select.innerHTML = '';
+            currentAssessmentHistory.forEach((entry, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                const dateLabel = entry.date ? new Date(entry.date).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+                const unreadPrefix = entry.viewed === false ? '🔴 ' : '';
+                opt.innerText = `${unreadPrefix}${dateLabel}${entry.label ? ' — ' + entry.label : ''}`;
+                if (entry.viewed === false) opt.classList.add('unread-opt');
+                select.appendChild(opt);
+            });
+        }
+
+        function onAssessmentDateSelect() {
+            const idx = parseInt(document.getElementById('assessmentDateSelect').value, 10);
+            renderAssessmentEntry(idx);
+            clearQuickTabActive();
+        }
+
+        function markQuickTabsData() {
+            [7, 14, 42].forEach(offset => {
+                const el = document.getElementById('quickTab' + offset);
+                el.classList.remove('has-data', 'unread', 'active');
+                const match = findClosestEntry(offset);
+                if (match) {
+                    el.classList.add('has-data');
+                    if (match.viewed === false) el.classList.add('unread');
+                }
+            });
+        }
+
+        function findClosestEntry(offsetDays) {
+            const target = window._quickTabTargets ? window._quickTabTargets[offsetDays] : null;
+            if (!target || currentAssessmentHistory.length === 0) return null;
+            let closest = null, closestDiff = Infinity;
+            currentAssessmentHistory.forEach(entry => {
+                if (!entry.date) return;
+                const diff = Math.abs(new Date(entry.date) - target);
+                if (diff < closestDiff && diff <= 1000 * 60 * 60 * 24 * 3) { // within 3-day tolerance
+                    closest = entry; closestDiff = diff;
+                }
+            });
+            return closest;
+        }
+
+        function clearQuickTabActive() {
+            [7, 14, 42].forEach(offset => document.getElementById('quickTab' + offset).classList.remove('active'));
+        }
+
+        function selectQuickTab(offsetDays) {
+            const entry = findClosestEntry(offsetDays);
+            clearQuickTabActive();
+            document.getElementById('quickTab' + offsetDays).classList.add('active');
+            if (!entry) {
+                document.getElementById('timeAssess').innerText = 'ยังไม่มีข้อมูลช่วงนี้';
+                document.getElementById('assessmentContent').innerHTML = `
                     <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12 mt-4">
-                        <i class="fa-regular fa-clock text-5xl mb-4 text-slate-200"></i>
-                        <p class="text-sm font-medium">ผู้ป่วยยังไม่มีประวัติการประเมิน</p>
-                    </div>`;
+                        <i class="fa-regular fa-calendar-xmark text-5xl mb-4 text-slate-200"></i>
+                        <p class="text-sm font-medium">ยังไม่มีข้อมูลการประเมินในช่วงนี้</p>
+                    </div>
+                `;
+                document.getElementById('detailUnreadBadge').classList.add('hidden');
                 return;
             }
-
-            let html = '';
-            assessments.forEach(a => {
-                const dateStr = new Date(a.timestamp).toLocaleString('th-TH');
-                const dotColor = (a.risk === 'เสี่ยงสูง') ? 'bg-red-500' : 'bg-green-500';
-                
-                // รูปภาพ
-                const getImg = (url) => (url && url !== 'Upload Failed' && url !== '') ? `<a href="${url}" target="_blank" class="text-blue-500 underline text-xs ml-2 border border-blue-200 px-2 py-0.5 rounded bg-white shadow-sm hover:bg-blue-50"><i class="fa-solid fa-image"></i> ดูรูป</a>` : '';
-                
-                // อาการเพิ่มเติม (เน้นสี)
-                const extraHtml = (a.extraSymp && a.extraSymp !== "-") ? 
-                    `<div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm shadow-inner"><span class="font-bold text-yellow-800"><i class="fa-solid fa-comment-medical"></i> อาการเพิ่มเติม:</span><br><span class="text-slate-700">${a.extraSymp}</span></div>` : '';
-
-                html += `
-                <div class="relative bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 timeline-item">
-                    <div class="timeline-dot ${dotColor}"></div>
-                    <div class="flex justify-between items-center mb-3 border-b border-slate-100 pb-2">
-                        <span class="font-bold text-slate-700"><i class="fa-regular fa-calendar text-blue-500 mr-1"></i> ${dateStr}</span>
-                        ${(a.risk === 'เสี่ยงสูง') ? '<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-triangle-exclamation"></i> เสี่ยงสูง</span>' : '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-check"></i> ปกติ</span>'}
-                    </div>
-                    <div class="grid grid-cols-1 gap-2 text-sm">
-                        ${a.symp1==='yes' ? `<p class="text-red-600 font-bold bg-red-50 p-2 rounded border border-red-100"><i class="fa-solid fa-xmark w-4"></i> ไข้สูง ปวดเมื่อย</p>` : `<p class="text-green-600 p-1"><i class="fa-solid fa-check w-4"></i> ไม่มีไข้</p>`}
-                        ${a.symp2==='yes' ? `<p class="text-red-600 font-bold bg-red-50 p-2 rounded border border-red-100"><i class="fa-solid fa-xmark w-4"></i> เจ็บปาก มีแผล ${getImg(a.photo2)}</p>` : `<p class="text-green-600 p-1"><i class="fa-solid fa-check w-4"></i> ไม่เจ็บปาก</p>`}
-                        ${a.symp3==='yes' ? `<p class="text-red-600 font-bold bg-red-50 p-2 rounded border border-red-100"><i class="fa-solid fa-xmark w-4"></i> ผื่นแดง ลอก ${getImg(a.photo3)}</p>` : `<p class="text-green-600 p-1"><i class="fa-solid fa-check w-4"></i> ไม่มีผื่น</p>`}
-                        ${a.symp4==='yes' ? `<p class="text-red-600 font-bold bg-red-50 p-2 rounded border border-red-100"><i class="fa-solid fa-xmark w-4"></i> เจ็บตา ตาบวม ${getImg(a.photo4)}</p>` : `<p class="text-green-600 p-1"><i class="fa-solid fa-check w-4"></i> ไม่เจ็บตา</p>`}
-                    </div>
-                    ${extraHtml}
-                </div>`;
-            });
-            container.innerHTML = html;
+            const idx = currentAssessmentHistory.indexOf(entry);
+            document.getElementById('assessmentDateSelect').value = idx;
+            renderAssessmentEntry(idx, /*skipTabClear*/ true);
         }
 
-        // ตัวกรองจำลอง เวลากดวันที่ 7, 14, 42
-        function filterTimeline(type) {
-            // ในเวอร์ชันนี้ ให้ Scroll ขึ้นบนสุดเพื่อดูประวัติล่าสุดทั้งหมด และไฮไลท์ให้รู้ว่ากด
-            const items = document.querySelectorAll('.timeline-item');
-            if(items.length > 0) {
-                document.getElementById('tab-content-assessments').scrollTo({ top: 0, behavior: 'smooth' });
-                // สามารถเพิ่มตรรกะซ่อน/โชว์ ของจริงตามวันที่ได้ที่นี่
+        function renderAssessmentEntry(idx, skipTabClear) {
+            if (idx < 0 || idx >= currentAssessmentHistory.length) return;
+            currentAssessmentIndex = idx;
+            const entry = currentAssessmentHistory[idx];
+            document.getElementById('assessmentDateSelect').value = idx;
+            if (!skipTabClear) clearQuickTabActive();
+
+            document.getElementById('timeAssess').innerText = entry.timestamp || 'ไม่มีข้อมูล';
+
+            const renderSymptom = (answer, label, photoUrl) => {
+                if (answer === 'yes') {
+                    let imageHtml = '';
+                    if (photoUrl && photoUrl !== '' && photoUrl !== 'Upload Failed') {
+                        imageHtml = `
+                            <div class="mt-2 text-center">
+                                <p class="text-xs text-slate-500 mb-1">ภาพถ่ายอาการ (คลิกเพื่อขยาย)</p>
+                                <img src="${photoUrl}" onclick="window.open('${photoUrl}')" class="w-full h-40 object-cover rounded-lg border-2 border-red-200 cursor-pointer hover:opacity-80 transition shadow-sm">
+                            </div>
+                        `;
+                    } else {
+                        imageHtml = `
+                            <div class="w-full h-24 mt-2 bg-white border-2 border-dashed border-red-200 rounded-lg flex flex-col items-center justify-center text-slate-400">
+                                <i class="fa-regular fa-image text-2xl mb-1"></i><span class="text-xs">ไม่มีรูปภาพแนบ</span>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="p-3 border border-red-200 rounded-lg mb-3 bg-red-50 shadow-sm">
+                            <p class="text-sm font-bold text-red-700"><i class="fa-solid fa-xmark mr-1"></i> มีอาการ: ${label}</p>
+                            ${imageHtml}
+                        </div>
+                    `;
+                } else if (answer === 'no') {
+                    return `
+                        <div class="p-3 border border-green-200 rounded-lg mb-3 bg-green-50 text-green-700 text-sm font-bold shadow-sm">
+                            <i class="fa-solid fa-check mr-1"></i> ไม่มีอาการ: ${label}
+                        </div>
+                    `;
+                }
+                return '';
+            };
+
+            // อาการที่ 5: รายการเพิ่มเติมที่ผู้ป่วยระบุเอง (ข้อความอิสระ) + รูปภาพ (ไม่บังคับ)
+            const renderCustomSymptom = (answer, customText, photoUrl) => {
+                if (answer !== 'yes') return '';
+                let imageHtml = '';
+                if (photoUrl && photoUrl !== '' && photoUrl !== 'Upload Failed') {
+                    imageHtml = `
+                        <div class="mt-2 text-center">
+                            <p class="text-xs text-slate-500 mb-1">ภาพถ่ายอาการ (คลิกเพื่อขยาย)</p>
+                            <img src="${photoUrl}" onclick="window.open('${photoUrl}')" class="w-full h-40 object-cover rounded-lg border-2 border-purple-200 cursor-pointer hover:opacity-80 transition shadow-sm">
+                        </div>
+                    `;
+                } else {
+                    imageHtml = `<p class="text-xs text-slate-400 mt-2"><i class="fa-regular fa-image mr-1"></i>ไม่มีรูปภาพแนบ (ไม่บังคับ)</p>`;
+                }
+                return `
+                    <div class="p-3 border border-purple-200 rounded-lg mb-3 bg-purple-50 shadow-sm">
+                        <p class="text-sm font-bold text-purple-700"><i class="fa-solid fa-comment-medical mr-1"></i> อาการเพิ่มเติมที่ผู้ป่วยระบุเอง</p>
+                        <p class="text-sm text-purple-800 mt-1">${customText ? customText : '(ไม่ได้ระบุรายละเอียด)'}</p>
+                        ${imageHtml}
+                    </div>
+                `;
+            };
+
+            const assessmentContent = document.getElementById('assessmentContent');
+            assessmentContent.innerHTML = `
+                ${renderSymptom(entry.symp1, 'ไข้สูง ปวดเมื่อยตามตัวคล้ายไข้หวัดใหญ่', null)}
+                ${renderSymptom(entry.symp2, 'เจ็บในปาก ในลำคอ มีแผลตามเยื่อบุ', entry.photo2)}
+                ${renderSymptom(entry.symp3, 'ผื่นนูน/ราบแดงตามลำตัว หรือลอกเป็นแผ่น', entry.photo3)}
+                ${renderSymptom(entry.symp4, 'เจ็บตา เยื่อบุตาแดง ตาบวม', entry.photo4)}
+                ${renderCustomSymptom(entry.symp5, entry.symp5Text, entry.photo5)}
+            `;
+
+            // ทำเครื่องหมายว่าอ่านแล้ว
+            if (entry.viewed === false) {
+                entry.viewed = true;
+                viewedOverrides[currentPatientRow.hn] = viewedOverrides[currentPatientRow.hn] || {};
+                viewedOverrides[currentPatientRow.hn][entry.date] = true;
+                populateAssessmentDropdown();
+                document.getElementById('assessmentDateSelect').value = idx;
+                markQuickTabsData();
+                updateSummaryCards();
+                renderTable();
+            }
+
+            const unreadRemaining = currentAssessmentHistory.filter(e => e.viewed === false).length;
+            const badge = document.getElementById('detailUnreadBadge');
+            if (unreadRemaining > 0) {
+                badge.classList.remove('hidden');
+                document.getElementById('detailUnreadCount').innerText = unreadRemaining;
+            } else {
+                badge.classList.add('hidden');
             }
         }
 
-        // ---- Pharmacist Notes ----
-        function renderPharmacistNotes(notes) {
-            const container = document.getElementById('pharmacistNotesHistory');
-            if(notes.length === 0) {
-                container.innerHTML = '<p class="text-center text-slate-400 mt-4 text-sm"><i class="fa-solid fa-inbox mb-2 text-2xl"></i><br>ยังไม่มีบันทึกสำหรับผู้ป่วยรายนี้</p>';
+        // ---------- Pharmacist notes ----------
+        function renderPharmacistNoteHistory(hn) {
+            const container = document.getElementById('pharmacistNoteHistory');
+            const notes = pharmacistNotesStore[hn] || [];
+            if (notes.length === 0) {
+                container.innerHTML = `<p class="text-slate-400 italic">ยังไม่มีประวัติการติดตามที่บันทึกไว้</p>`;
                 return;
             }
-            let html = '';
-            notes.forEach(n => {
-                const dateStr = new Date(n.timestamp).toLocaleString('th-TH');
-                html += `
-                <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 shadow-sm relative">
-                    <p class="text-xs font-bold text-blue-800 mb-2 border-b border-blue-200 pb-1"><i class="fa-solid fa-pen-nib"></i> บันทึกเมื่อ: ${dateStr}</p>
-                    <p class="text-sm text-slate-700 whitespace-pre-line leading-relaxed">${n.note}</p>
-                </div>`;
-            });
-            container.innerHTML = html;
+            const sorted = notes.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+            container.innerHTML = sorted.map(n => `
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg fade-in">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-slate-700">${n.followPeriodLabel}</span>
+                        <span class="text-slate-400">${n.date}</span>
+                    </div>
+                    <p class="text-slate-600"><i class="fa-solid fa-phone-volume text-slate-400 w-3 mr-1"></i>วิธีติดตาม: ${n.followMethodLabel}</p>
+                    ${n.summary ? `<p class="text-slate-600 mt-1"><span class="font-medium">สรุป:</span> ${n.summary}</p>` : ''}
+                    ${n.recommendation ? `<p class="text-slate-600 mt-1"><span class="font-medium">คำแนะนำ:</span> ${n.recommendation}</p>` : ''}
+                    <p class="text-slate-400 mt-1"><i class="fa-solid fa-user-pen w-3 mr-1"></i>${n.recorder || 'ไม่ระบุผู้บันทึก'}</p>
+                </div>
+            `).join('');
         }
 
         async function savePharmacistNote() {
-            const noteInput = document.getElementById('pharmacistNoteInput');
-            const noteText = noteInput.value.trim();
-            if(!noteText) return;
-            
+            if (!currentPatientRow) return;
             const btn = document.getElementById('saveNoteBtn');
-            const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
             btn.disabled = true;
-            
+
+            const periodSelect = document.getElementById('noteFollowPeriod');
+            const methodSelect = document.getElementById('followMethod');
+            const methodOther = document.getElementById('followMethodOther').value;
+            const now = new Date();
+
+            const note = {
+                date: now.toLocaleString('th-TH'),        // วันที่บันทึกอัตโนมัติ
+                followPeriod: periodSelect.value,
+                followPeriodLabel: periodSelect.options[periodSelect.selectedIndex].text,
+                followMethod: methodSelect.value === 'other' ? methodOther : methodSelect.value,
+                followMethodLabel: methodSelect.value === 'other' ? (methodOther || 'อื่นๆ') : methodSelect.options[methodSelect.selectedIndex].text,
+                summary: document.getElementById('noteSummary').value,
+                recommendation: document.getElementById('noteRecommendation').value,
+                recorder: document.getElementById('noteRecorder').value
+            };
+
+            const hn = currentPatientRow.hn;
+            if (!pharmacistNotesStore[hn]) pharmacistNotesStore[hn] = [];
+            pharmacistNotesStore[hn].push(note);
+
+            // พยายามส่งไปยัง backend ด้วย (สำหรับผู้ที่ขยาย Apps Script ให้รองรับ action นี้ในอนาคต)
             try {
-                const payload = { action: 'add_pharmacist_note', hn: currentModalHN, note: noteText };
-                await fetch(GOOGLE_APP_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                
-                // อัปเดตฝั่งหน้าจอทันที
-                const container = document.getElementById('pharmacistNotesHistory');
-                if(container.innerHTML.includes('ยังไม่มีบันทึก')) container.innerHTML = '';
-                const dateStr = new Date().toLocaleString('th-TH');
-                container.innerHTML = `
-                    <div class="bg-green-50 p-3 rounded-lg border border-green-200 shadow-sm animate-pulse relative">
-                        <p class="text-xs font-bold text-green-800 mb-2 border-b border-green-200 pb-1"><i class="fa-solid fa-pen-nib"></i> บันทึกเมื่อ: ${dateStr} (ล่าสุด)</p>
-                        <p class="text-sm text-slate-700 whitespace-pre-line leading-relaxed">${noteText}</p>
-                    </div>` + container.innerHTML;
-                
-                noteInput.value = '';
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> บันทึกสำเร็จ';
-                btn.classList.replace('bg-blue-600', 'bg-green-500');
-            } catch (err) {
-                alert("บันทึกไม่สำเร็จ");
-            } finally {
-                setTimeout(() => { 
-                    btn.innerHTML = originalHTML; 
-                    btn.classList.replace('bg-green-500', 'bg-blue-600');
-                    btn.disabled = false; 
-                }, 2000);
-            }
+                await fetch(GOOGLE_APP_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'add_note', hn, ...note }),
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                });
+            } catch (e) { /* เก็บไว้ใน local store ต่อแม้ backend จะยังไม่รองรับ */ }
+
+            renderPharmacistNoteHistory(hn);
+
+            btn.innerHTML = '<i class="fa-solid fa-check-circle text-lg"></i> บันทึกเรียบร้อย';
+            btn.classList.replace('bg-blue-600', 'bg-green-500');
+            btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-600');
+            document.getElementById('pharmacistNoteForm').reset();
+            toggleOtherMethod();
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fa-solid fa-save"></i> บันทึกประวัติ';
+                btn.classList.replace('bg-green-500', 'bg-blue-600');
+                btn.classList.replace('hover:bg-green-600', 'hover:bg-blue-700');
+                btn.disabled = false;
+            }, 2000);
         }
 
-        // ---- PDF & Submit New Patient ----
         function printA5PDF() {
-            const hn = document.getElementById('detailHN').innerText.replace('HN: ', '');
+            const hn = document.getElementById('detailHN').innerText;
             const name = document.getElementById('detailName').innerText;
             const qrSrc = document.getElementById('detailQR').src;
-            
+
             const printWin = window.open('', '_blank');
             printWin.document.write(`
                 <html><head><title>สมุดประจำตัวผู้ป่วย (PDF)</title>
@@ -598,9 +926,9 @@
                 <body><div class="container">
                     <h1>สมุดประจำตัวผู้ป่วย</h1><p>เฝ้าระวังอาการแพ้ยารุนแรง (SCARs)</p>
                     <hr style="border:1px solid #eee; width:80%; margin:20px auto;">
-                    <p><b>${name}</b><br><span style="font-size:16px">HN: ${hn}</span></p>
+                    <p><b>${name}</b><br><span style="font-size:16px">${hn}</span></p>
                     <img src="${qrSrc}" alt="QR Code">
-                    <p class="footer">โปรดสแกน QR Code เพื่อทำแบบประเมินตามกำหนด</p>
+                    <p class="footer">โปรดสแกน QR Code เพื่อทำแบบประเมิน</p>
                 </div>
                 <script>setTimeout(() => { window.print(); window.close(); }, 800);<\/script>
                 </body></html>
@@ -611,14 +939,10 @@
         async function submitForm(event) {
             event.preventDefault();
             const btn = document.getElementById('submitBtn');
-            const payload = { 
-                action: 'add_patient', 
-                hn: document.getElementById('hn').value, 
-                phone: document.getElementById('addPhone').value,
-                name: document.getElementById('patientName').value, 
-                drug: document.getElementById('drug').value, 
-                date: document.getElementById('startDate').value, 
-                history: document.getElementById('allergyHistory').value || "-"
+            const payload = {
+                action: 'add_patient', hn: document.getElementById('hn').value, name: document.getElementById('patientName').value,
+                phone: document.getElementById('phone').value,
+                drug: document.getElementById('drug').value, date: document.getElementById('startDate').value, history: document.getElementById('allergyHistory').value
             };
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...'; btn.disabled = true;
             try {
@@ -626,13 +950,66 @@
                 const result = await res.json();
                 if(result.status === 'success') {
                     document.getElementById('addPatientForm').reset();
-                    toggleModal('addPatientModal'); 
-                    loadData(); 
+                    toggleModal('addPatientModal');
+                    loadData();
                 }
             } catch (error) { alert("เกิดข้อผิดพลาด"); } finally { btn.innerHTML = 'บันทึกข้อมูล'; btn.disabled = false; }
         }
 
-        window.onload = () => { loadData(); setInterval(loadData, 15000); };
+        // ---------- Statistics view ----------
+        function renderStatsView() {
+            const total = allPatientsData.length;
+            let highRisk = 0, pending = 0, normal = 0, overdue = 0;
+            const drugCounts = {};
+            allPatientsData.forEach(row => {
+                if(row.status === 'เสี่ยงสูง') highRisk++;
+                else if(row.status === 'รอตอบแบบประเมิน') pending++;
+                else if(row.status === 'เลยกำหนด 24 ชม.') overdue++;
+                else if(row.status === 'ลงทะเบียนแล้ว') normal++;
+                drugCounts[row.drug] = (drugCounts[row.drug] || 0) + 1;
+            });
+            const responded = total - pending - overdue;
+            const responseRate = total > 0 ? Math.round((responded / total) * 100) : 0;
+
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statResponseRate').innerText = responseRate + '%';
+            document.getElementById('statHighRisk').innerText = highRisk;
+            document.getElementById('statOverdue').innerText = overdue;
+            document.getElementById('statsUpdatedAt').innerText = new Date().toLocaleTimeString('th-TH') + ' น.';
+
+            const statusCtx = document.getElementById('statusChart');
+            if (statusChartInstance) statusChartInstance.destroy();
+            statusChartInstance = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['เสี่ยงสูง', 'เลยกำหนด 24 ชม.', 'รอประเมิน', 'ปกติ/ติดตามแล้ว'],
+                    datasets: [{
+                        data: [highRisk, overdue, pending, normal],
+                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e'],
+                        borderWidth: 2, borderColor: '#fff'
+                    }]
+                },
+                options: { plugins: { legend: { position: 'bottom', labels: { font: { family: 'Sarabun' }, boxWidth: 12 } } }, cutout: '65%' }
+            });
+
+            const drugLabels = Object.keys(drugCounts);
+            const drugValues = drugLabels.map(l => drugCounts[l]);
+            const drugCtx = document.getElementById('drugChart');
+            if (drugChartInstance) drugChartInstance.destroy();
+            drugChartInstance = new Chart(drugCtx, {
+                type: 'bar',
+                data: {
+                    labels: drugLabels,
+                    datasets: [{ label: 'จำนวนผู้ป่วย', data: drugValues, backgroundColor: '#1e3a8a', borderRadius: 6, maxBarThickness: 60 }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Sarabun' } } }, x: { ticks: { font: { family: 'Sarabun' } } } }
+                }
+            });
+        }
+
+        window.onload = () => { loadData(); setInterval(loadData, 15000); toggleOtherMethod(); };
     </script>
 </body>
 </html>
