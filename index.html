@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -290,13 +290,13 @@
                         <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-regular fa-calendar text-blue-500"></i> กำหนดการติดตามอาการ (คลิกเพื่อดูผล)</p>
                         <div class="flex text-center text-xs gap-2">
                             <div id="quickTab7" onclick="selectQuickTab(7)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
-                                <p class="font-bold text-blue-800 quick-tab-label">Day 7</p><span id="date7" class="text-slate-600 font-medium quick-tab-date"></span>
+                                <p class="font-bold text-blue-800 quick-tab-label">DD/MM/YYYY</p><span id="date7" class="text-slate-600 font-medium quick-tab-date"></span>
                             </div>
                             <div id="quickTab14" onclick="selectQuickTab(14)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
-                                <p class="font-bold text-slate-700 quick-tab-label">Day 14</p><span id="date14" class="text-slate-500 quick-tab-date"></span>
+                                <p class="font-bold text-slate-700 quick-tab-label">DD/MM/YYYY</p><span id="date14" class="text-slate-500 quick-tab-date"></span>
                             </div>
                             <div id="quickTab42" onclick="selectQuickTab(42)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
-                                <p class="font-bold text-slate-700 quick-tab-label">Week 6</p><span id="date42" class="text-slate-500 quick-tab-date"></span>
+                                <p class="font-bold text-slate-700 quick-tab-label">DD/MM/YYYY</p><span id="date42" class="text-slate-500 quick-tab-date"></span>
                             </div>
                         </div>
                     </div>
@@ -330,10 +330,7 @@
                             <div>
                                 <label class="block text-slate-600 mb-1 font-medium">ระยะเวลาติดตาม</label>
                                 <select id="noteFollowPeriod" class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-blue-50 font-semibold text-blue-800">
-                                    <option value="1w">Day 7 (สัปดาห์ 1)</option>
-                                    <option value="2w">Day 14 (สัปดาห์ 2)</option>
-                                    <option value="6w">Week 6</option>
-                                    <option value="other">เพิ่มเติม/ฉุกเฉิน</option>
+                                    <!-- ตัวเลือกจะถูกสร้างด้วย JS จากวันที่จริง -->
                                 </select>
                             </div>
                             <div>
@@ -464,17 +461,37 @@
 
         async function loadData() {
             try {
-                // FIX 1: เพิ่ม Cache-Buster (t=...) ป้องกันบราวเซอร์จำหน้าเว็บเก่า (ทำให้ตารางอัปเดตแบบเรียลไทม์)
                 const response = await fetch(GOOGLE_APP_SCRIPT_URL + '?t=' + new Date().getTime());
                 const newData = await response.json();
 
                 if(JSON.stringify(newData) !== JSON.stringify(allPatientsData)) {
                     allPatientsData = newData;
+
+                    // FIX 2: ดึงข้อมูลประวัติ Note เภสัชกรจาก Backend มาลง Store
+                    allPatientsData.forEach(row => {
+                        if (row.notes && Array.isArray(row.notes)) {
+                            pharmacistNotesStore[row.hn] = row.notes.map(n => {
+                                try {
+                                    const parsed = JSON.parse(n.note);
+                                    return { ...parsed, date: parsed.date || new Date(n.timestamp).toLocaleString('th-TH') };
+                                } catch(e) {
+                                    return {
+                                        date: new Date(n.timestamp).toLocaleString('th-TH'),
+                                        followPeriodLabel: 'บันทึกเก่า',
+                                        followMethodLabel: '-',
+                                        summary: n.note,
+                                        recommendation: '',
+                                        recorder: ''
+                                    };
+                                }
+                            });
+                        }
+                    });
+
                     handleSearch();
                     updateSummaryCards();
                     if (currentView === 'stats') renderStatsView();
 
-                    // FIX 4: อัปเดตแฟ้มประวัติแบบเรียลไทม์ (ถ้าเภสัชกรเปิดแฟ้มคนไข้ค้างไว้อยู่)
                     const modal = document.getElementById('patientDetailsModal');
                     if (!modal.classList.contains('hidden') && currentPatientRow) {
                         const updatedRow = allPatientsData.find(p => p.hn === currentPatientRow.hn);
@@ -499,22 +516,19 @@
             } catch (error) { console.error("Auto-refresh failed", error); }
         }
 
-        // ---------- Assessment history helpers ----------
         function getAssessmentHistory(row) {
             let history = [];
-            // FIX 2: ดึง Array ข้อมูลประวัติจากตัวแปรที่ส่งมาจาก Backend ให้ถูกต้อง (รองรับทั้งระบบเก่าและระบบล่าสุด)
             const backendAssessments = row.assessments || row.assessmentHistory;
             
             if (Array.isArray(backendAssessments) && backendAssessments.length > 0) {
-                // FIX 3: ทำ Data Mapping ให้ชื่อตัวแปร (Field) สอดคล้องกับที่ Frontend เรียกใช้
                 history = backendAssessments.map(a => {
                     const hasExtra = a.extraSymp && a.extraSymp !== "-" && a.extraSymp !== "";
                     return {
                         ...a,
-                        date: a.date || a.timestamp,       // แปลง timestamp ของ Backend เป็น date เพื่อให้เรียงวันที่ได้
+                        date: a.date || a.timestamp,       
                         timestamp: a.timestamp || a.date,
-                        viewed: a.viewed !== undefined ? a.viewed : (a.isRead !== undefined ? a.isRead : true), // แปลงระบบแจ้งเตือน
-                        symp5: a.symp5 !== undefined ? a.symp5 : (hasExtra ? 'yes' : 'no'), // แปลงช่องข้อความเพิ่มเติม
+                        viewed: a.viewed !== undefined ? a.viewed : (a.isRead !== undefined ? a.isRead : true), 
+                        symp5: a.symp5 !== undefined ? a.symp5 : (hasExtra ? 'yes' : 'no'), 
                         symp5Text: a.symp5Text !== undefined ? a.symp5Text : (a.extraSymp || '')
                     };
                 });
@@ -529,7 +543,6 @@
                     viewed: true
                 }];
             }
-            // เรียงจากประวัติล่าสุดให้อยู่บนสุด
             history.sort((a, b) => new Date(b.date) - new Date(a.date));
             const overrides = viewedOverrides[row.hn] || {};
             history.forEach(e => { if (overrides[e.date]) e.viewed = true; });
@@ -632,11 +645,16 @@
         }
         function changePage(newPage) { currentPage = newPage; renderTable(); }
 
+        // FIX 3: ปรับ Format ของวันที่ให้เป็นแบบวันที่จริง (DD/MM/YYYY)
         function calculateFollowUpDate(rawDateStr, addDays) {
             if(!rawDateStr) return { display: "-", raw: null };
             const d = new Date(rawDateStr);
             d.setDate(d.getDate() + addDays);
-            return { display: d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' }), raw: d };
+            
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear(); // รูปแบบคริสต์ศักราช
+            return { display: `${dd}/${mm}/${yyyy}`, raw: d };
         }
 
         function openDetails(rowDataStr) {
@@ -657,9 +675,23 @@
             const d7 = calculateFollowUpDate(data.rawDate, 7);
             const d14 = calculateFollowUpDate(data.rawDate, 14);
             const d42 = calculateFollowUpDate(data.rawDate, 42);
-            document.getElementById('date7').innerText = d7.display;
-            document.getElementById('date14').innerText = d14.display;
-            document.getElementById('date42').innerText = d42.display;
+            
+            // แทนที่ป้ายกำกับด้านบนด้วยวันที่จริงทั้งหมด และซ่อน Span ตัวเก่าเพื่อความสวยงาม
+            document.querySelector('#quickTab7 .quick-tab-label').innerText = d7.display;
+            document.querySelector('#quickTab14 .quick-tab-label').innerText = d14.display;
+            document.querySelector('#quickTab42 .quick-tab-label').innerText = d42.display;
+            document.getElementById('date7').innerText = "";
+            document.getElementById('date14').innerText = "";
+            document.getElementById('date42').innerText = "";
+            
+            // อัปเดตตัวเลือกในฟอร์มบันทึกของเภสัชกร
+            document.getElementById('noteFollowPeriod').innerHTML = `
+                <option value="1w">${d7.display}</option>
+                <option value="2w">${d14.display}</option>
+                <option value="6w">${d42.display}</option>
+                <option value="other">เพิ่มเติม/ฉุกเฉิน</option>
+            `;
+
             window._quickTabTargets = { 7: d7.raw, 14: d14.raw, 42: d42.raw };
 
             document.getElementById('timeRegister').innerText = data.regTimestamp || "ไม่มีข้อมูล";
@@ -743,19 +775,24 @@
             const entry = findClosestEntry(offsetDays);
             clearQuickTabActive();
             document.getElementById('quickTab' + offsetDays).classList.add('active');
+            
+            // FIX 1: Reset Assessment Select State
+            const select = document.getElementById('assessmentDateSelect');
+            select.selectedIndex = -1;
+
             if (!entry) {
                 document.getElementById('timeAssess').innerText = 'ยังไม่มีข้อมูลช่วงนี้';
                 document.getElementById('assessmentContent').innerHTML = `
                     <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12 mt-4">
                         <i class="fa-regular fa-calendar-xmark text-5xl mb-4 text-slate-200"></i>
-                        <p class="text-sm font-medium">ยังไม่มีข้อมูลการประเมินในช่วงนี้</p>
+                        <p class="text-sm font-medium">ยังไม่มีการประเมินในวันนี้</p>
                     </div>
                 `;
                 document.getElementById('detailUnreadBadge').classList.add('hidden');
                 return;
             }
             const idx = currentAssessmentHistory.indexOf(entry);
-            document.getElementById('assessmentDateSelect').value = idx;
+            select.value = idx;
             renderAssessmentEntry(idx, true);
         }
 
@@ -902,10 +939,11 @@
             if (!pharmacistNotesStore[hn]) pharmacistNotesStore[hn] = [];
             pharmacistNotesStore[hn].push(note);
 
+            // FIX 2: ส่งข้อมูล Note กลับไปบันทึกที่ Backend 
             try {
                 await fetch(GOOGLE_APP_SCRIPT_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'add_note', hn, ...note }),
+                    body: JSON.stringify({ action: 'add_pharmacist_note', hn, note: JSON.stringify(note) }),
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                 });
             } catch (e) { }
