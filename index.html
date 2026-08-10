@@ -17,11 +17,6 @@
         .sidebar-collapsed .sidebar-label { opacity: 0; width: 0; }
         .sidebar-collapsed .sidebar-brand-text { opacity: 0; width: 0; }
         
-        /* ปรับแต่งส่วนแสดงข้อมูลกำหนดการให้เป็นแบบ Display Only ตามข้อกำหนด (ไม่ให้มีเอฟเฟกต์คลิก) */
-        .quick-tab { cursor: default !important; position: relative; }
-        .quick-tab.has-data::after { content: ''; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 999px; background: #22c55e; }
-        .quick-tab.unread::after { background: #ef4444; }
-        
         .unread-dot { display:inline-block; width:8px; height:8px; border-radius:999px; background:#ef4444; margin-right:4px; box-shadow: 0 0 0 2px #fff; }
         select#assessmentDateSelect option.unread-opt { font-weight: 700; }
         .view-section { display: none; }
@@ -291,7 +286,7 @@
                     </div>
                 </div>
 
-                <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ และ วันที่นัด -->
+                <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ และ กำหนดการติดตามอาการ -->
                 <div class="col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
                     <div class="flex items-center justify-between border-b pb-3 mb-4">
                         <h4 class="font-bold text-slate-800 flex items-center gap-2">
@@ -302,18 +297,18 @@
                         </div>
                     </div>
 
-                    <!-- กำหนดการติดตามอาการ (เปลี่ยนเป็นแสดงข้อมูลอย่างเดียว ไม่สามารถคลิกได้) -->
+                    <!-- ส่วนใหม่: กำหนดการติดตามอาการ (Display Only - ตามข้อกำหนดหัวข้อ 2-6) -->
                     <div class="mb-4">
                         <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-regular fa-calendar text-blue-500"></i> กำหนดการติดตามอาการ</p>
                         <div class="flex text-center text-xs gap-2">
-                            <div id="quickTab7" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white">
-                                <p class="font-bold text-blue-800 quick-tab-label">Day 7</p><span id="date7" class="text-slate-600 font-medium quick-tab-date"></span>
+                            <div id="displayTab7" class="flex-1 py-2 rounded-lg border border-slate-200 bg-white">
+                                <p class="font-bold text-slate-700">Day 7</p><span id="dispDate7" class="font-medium text-slate-600"></span>
                             </div>
-                            <div id="quickTab14" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white">
-                                <p class="font-bold text-slate-700 quick-tab-label">Day 14</p><span id="date14" class="text-slate-500 quick-tab-date"></span>
+                            <div id="displayTab14" class="flex-1 py-2 rounded-lg border border-slate-200 bg-white">
+                                <p class="font-bold text-slate-700">Day 14</p><span id="dispDate14" class="font-medium text-slate-600"></span>
                             </div>
-                            <div id="quickTab42" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white">
-                                <p class="font-bold text-slate-700 quick-tab-label">Week 6</p><span id="date42" class="text-slate-500 quick-tab-date"></span>
+                            <div id="displayTab42" class="flex-1 py-2 rounded-lg border border-slate-200 bg-white">
+                                <p class="font-bold text-slate-700">Week 6</p><span id="dispDate42" class="font-medium text-slate-600"></span>
                             </div>
                         </div>
                     </div>
@@ -554,7 +549,6 @@
                             currentAssessmentHistory = getAssessmentHistory(updatedRow);
                             document.getElementById('detailStatus').innerHTML = getStatusBadge(updatedRow.status);
                             populateAssessmentDropdown();
-                            markQuickTabsData();
                             
                             if (currentAssessmentHistory.length > 0) {
                                 let nextIdx = currentAssessmentIndex >= 0 && currentAssessmentIndex < currentAssessmentHistory.length ? currentAssessmentIndex : 0;
@@ -706,6 +700,32 @@
             return { display: toDDMMYYYY(d), raw: d };
         }
 
+        // ฟังก์ชันกำหนดสีตามเงื่อนไข: ผ่านไปแล้ว (สีเทา), วันนี้ (เด่นขึ้นเล็กน้อย), อนาคต (สีปกติ)
+        function applyDisplayStylesForDate(elementId, targetDateRaw) {
+            const el = document.getElementById(elementId);
+            if (!targetDateRaw) return;
+            
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            const target = new Date(targetDateRaw);
+            target.setHours(0,0,0,0);
+
+            // รีเซ็ตคลาสก่อนหน้า
+            el.className = "font-medium text-xs";
+
+            if (target.getTime() < today.getTime()) {
+                // ผ่านไปแล้ว -> สีเทา
+                el.classList.add("text-slate-400");
+            } else if (target.getTime() === today.getTime()) {
+                // วันนี้ -> เด่นขึ้นเล็กน้อยตามดีไซน์ระบบ
+                el.classList.add("text-blue-700", "font-bold");
+            } else {
+                // อนาคต -> สีปกติ
+                el.classList.add("text-slate-600");
+            }
+        }
+
         function openDetails(rowDataStr) {
             const data = JSON.parse(decodeURIComponent(rowDataStr));
             currentPatientRow = data;
@@ -726,14 +746,15 @@
             const d14 = calculateFollowUpDate(data.rawDate, 14);
             const d42 = calculateFollowUpDate(data.rawDate, 42);
             
-            document.querySelector('#quickTab7 .quick-tab-label').innerText = 'Day 7';
-            document.getElementById('date7').innerText = d7.display;
-            
-            document.querySelector('#quickTab14 .quick-tab-label').innerText = 'Day 14';
-            document.getElementById('date14').innerText = d14.display;
-            
-            document.querySelector('#quickTab42 .quick-tab-label').innerText = 'Week 6';
-            document.getElementById('date42').innerText = d42.display;
+            // แสดงผลวันที่ในส่วน "กำหนดการติดตามอาการ" แบบ Display Only และจัดการสีตามเงื่อนไขข้อ 5 & 6
+            document.getElementById('dispDate7').innerText = d7.display;
+            applyDisplayStylesForDate('dispDate7', d7.raw);
+
+            document.getElementById('dispDate14').innerText = d14.display;
+            applyDisplayStylesForDate('dispDate14', d14.raw);
+
+            document.getElementById('dispDate42').innerText = d42.display;
+            applyDisplayStylesForDate('dispDate42', d42.raw);
 
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -741,13 +762,10 @@
             const dd = String(today.getDate()).padStart(2, '0');
             document.getElementById('noteFollowPeriod').value = `${yyyy}-${mm}-${dd}`;
 
-            window._quickTabTargets = { 7: d7.raw, 14: d14.raw, 42: d42.raw };
-
             document.getElementById('timeRegister').innerText = data.regTimestamp || "ไม่มีข้อมูล";
 
             currentAssessmentHistory = getAssessmentHistory(data);
             populateAssessmentDropdown();
-            markQuickTabsData();
 
             if (currentAssessmentHistory.length > 0) {
                 let startIndex = currentAssessmentHistory.findIndex(e => e.viewed === false);
@@ -788,32 +806,6 @@
         function onAssessmentDateSelect() {
             const idx = parseInt(document.getElementById('assessmentDateSelect').value, 10);
             renderAssessmentEntry(idx);
-        }
-
-        function markQuickTabsData() {
-            [7, 14, 42].forEach(offset => {
-                const el = document.getElementById('quickTab' + offset);
-                el.classList.remove('has-data', 'unread');
-                const match = findClosestEntry(offset);
-                if (match) {
-                    el.classList.add('has-data');
-                    if (match.viewed === false) el.classList.add('unread');
-                }
-            });
-        }
-
-        function findClosestEntry(offsetDays) {
-            const target = window._quickTabTargets ? window._quickTabTargets[offsetDays] : null;
-            if (!target || currentAssessmentHistory.length === 0) return null;
-            let closest = null, closestDiff = Infinity;
-            currentAssessmentHistory.forEach(entry => {
-                if (!entry.date) return;
-                const diff = Math.abs(new Date(entry.date) - target);
-                if (diff < closestDiff && diff <= 1000 * 60 * 60 * 24 * 3) { 
-                    closest = entry; closestDiff = diff;
-                }
-            });
-            return closest;
         }
 
         function renderAssessmentEntry(idx) {
@@ -904,7 +896,6 @@
 
                 populateAssessmentDropdown();
                 document.getElementById('assessmentDateSelect').value = idx;
-                markQuickTabsData();
                 updateSummaryCards();
                 renderTable();
             }
