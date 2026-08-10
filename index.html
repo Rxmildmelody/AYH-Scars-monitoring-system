@@ -16,12 +16,12 @@
         .sidebar-label { transition: opacity .15s ease, width .15s ease; white-space: nowrap; overflow: hidden; }
         .sidebar-collapsed .sidebar-label { opacity: 0; width: 0; }
         .sidebar-collapsed .sidebar-brand-text { opacity: 0; width: 0; }
-        .quick-tab { cursor: pointer; transition: all .15s ease; }
-        .quick-tab.active { background-color: #1e3a8a !important; color: white !important; }
-        .quick-tab.active .quick-tab-label, .quick-tab.active .quick-tab-date { color: white !important; }
-        .quick-tab.has-data:not(.active)::after { content: ''; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 999px; background: #22c55e; }
-        .quick-tab.unread:not(.active)::after { background: #ef4444; }
-        .quick-tab { position: relative; }
+        
+        /* ปรับแต่งส่วนแสดงข้อมูลกำหนดการให้เป็นแบบ Display Only ตามข้อกำหนด (ไม่ให้มีเอฟเฟกต์คลิก) */
+        .quick-tab { cursor: default !important; position: relative; }
+        .quick-tab.has-data::after { content: ''; position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 999px; background: #22c55e; }
+        .quick-tab.unread::after { background: #ef4444; }
+        
         .unread-dot { display:inline-block; width:8px; height:8px; border-radius:999px; background:#ef4444; margin-right:4px; box-shadow: 0 0 0 2px #fff; }
         select#assessmentDateSelect option.unread-opt { font-weight: 700; }
         .view-section { display: none; }
@@ -302,25 +302,25 @@
                         </div>
                     </div>
 
-                    <!-- ปฏิทินที่ต้องติดตาม (คลิกได้) -->
+                    <!-- กำหนดการติดตามอาการ (เปลี่ยนเป็นแสดงข้อมูลอย่างเดียว ไม่สามารถคลิกได้) -->
                     <div class="mb-4">
-                        <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-regular fa-calendar text-blue-500"></i> กำหนดการติดตามอาการ (คลิกเพื่อดูผล)</p>
+                        <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-regular fa-calendar text-blue-500"></i> กำหนดการติดตามอาการ</p>
                         <div class="flex text-center text-xs gap-2">
-                            <div id="quickTab7" onclick="selectQuickTab(7)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
+                            <div id="quickTab7" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white">
                                 <p class="font-bold text-blue-800 quick-tab-label">Day 7</p><span id="date7" class="text-slate-600 font-medium quick-tab-date"></span>
                             </div>
-                            <div id="quickTab14" onclick="selectQuickTab(14)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
+                            <div id="quickTab14" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white">
                                 <p class="font-bold text-slate-700 quick-tab-label">Day 14</p><span id="date14" class="text-slate-500 quick-tab-date"></span>
                             </div>
-                            <div id="quickTab42" onclick="selectQuickTab(42)" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white hover:border-blue-300">
+                            <div id="quickTab42" class="quick-tab flex-1 py-2 rounded-lg border border-slate-200 bg-white">
                                 <p class="font-bold text-slate-700 quick-tab-label">Week 6</p><span id="date42" class="text-slate-500 quick-tab-date"></span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- เลือกดูตามวันที่ / ประวัติทั้งหมด -->
+                    <!-- เลือกดูตามวันที่ / ประวัติทั้งหมด (ใช้ Dropdown นี้สำหรับการเลือกดูผลประเมิน) -->
                     <div class="mb-4">
-                        <label class="text-xs font-bold text-slate-500 mb-1 block uppercase"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> ประวัติการประเมินทั้งหมด (เรียงล่าสุดก่อน)</label>
+                        <label class="text-xs font-bold text-slate-500 mb-1 block uppercase"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> เลือกช่วงติดตามเพื่อดูผล</label>
                         <select id="assessmentDateSelect" onchange="onAssessmentDateSelect()" class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white text-sm font-medium"></select>
                     </div>
 
@@ -393,7 +393,6 @@
     </div>
 
     <script>
-        // ⚠️ การตั้งค่า URL
         const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzBDF7UHDU6o9ZgRm2Pj-vCXsdjgX_0RLOXBpPv4AaPKSwQuuDSOO9Vk3pog2LS866x/exec';
         const LIFF_URL_BASE = 'https://liff.line.me/2010995687-3szXwNXK?hn=';
 
@@ -413,8 +412,6 @@
         let statusChartInstance = null;
         let drugChartInstance = null;
 
-        // ---------- Date & Time Utilities ----------
-        
         function toDDMMYYYY(dateObj) {
             if (isNaN(dateObj.getTime())) return "-";
             const dd = String(dateObj.getDate()).padStart(2, '0');
@@ -451,7 +448,6 @@
             return `${periodName} • ${toDDMMYYYY(target)}`;
         }
 
-        // ---------- Sidebar / View switching ----------
         function toggleSidebar() {
             sidebarCollapsed = !sidebarCollapsed;
             const sidebar = document.getElementById('sidebar');
@@ -618,41 +614,11 @@
         function updateSummaryCards() {
             let highRisk = 0, pending = 0, normal = 0, overdue = 0;
             allPatientsData.forEach(row => {
-                // คำนวณสถานะฝั่ง Client ให้ตรงกับเงื่อนไขใหม่ 100%
-                let computedStatus = row.status;
-                const assessments = row.assessments || [];
-                
-                if (assessments.length === 0 && row.rawDate) {
-                    const start = new Date(row.rawDate);
-                    const now = new Date();
-                    
-                    const checkClientOverdue = (days) => {
-                        const due = new Date(start);
-                        due.setDate(due.getDate() + days);
-                        const deadline = new Date(due);
-                        deadline.setDate(deadline.getDate() + 1); // เกิน 24 ชม. จากวันครบกำหนด
-                        deadline.setHours(0,0,0,0);
-                        return now.getTime() > deadline.getTime();
-                    };
-
-                    if (checkClientOverdue(7) || checkClientOverdue(14) || checkClientOverdue(42)) {
-                        computedStatus = 'เลยกำหนด 24 ชม.';
-                    } else {
-                        computedStatus = 'รอตอบแบบประเมิน';
-                    }
-                } else if (assessments.length > 0) {
-                    const hasHighRisk = assessments.some(a => a.risk === 'เสี่ยงสูง');
-                    computedStatus = hasHighRisk ? 'เสี่ยงสูง' : 'ลงทะเบียนแล้ว';
-                }
-
-                row.status = computedStatus; // อัปเดตสถานะจริงให้แถวข้อมูล
-
-                if(computedStatus === 'เสี่ยงสูง') highRisk++;
-                else if(computedStatus === 'รอตอบแบบประเมิน') pending++;
-                else if(computedStatus === 'เลยกำหนด 24 ชม.') overdue++;
-                else if(computedStatus === 'ลงทะเบียนแล้ว' || computedStatus === 'ปกติ') normal++;
+                if(row.status === 'เสี่ยงสูง') highRisk++;
+                else if(row.status === 'รอตอบแบบประเมิน') pending++;
+                else if(row.status === 'เลยกำหนด 24 ชม.') overdue++;
+                else if(row.status === 'ลงทะเบียนแล้ว' || row.status === 'ปกติ') normal++;
             });
-
             const unread = countTotalUnread();
             document.getElementById('countTotal').innerText = allPatientsData.length;
             document.getElementById('countHighRisk').innerText = highRisk;
@@ -797,7 +763,6 @@
                         <p class="text-sm font-medium">ผู้ป่วยยังไม่ได้ทำแบบประเมิน</p>
                     </div>
                 `;
-                clearQuickTabActive();
             }
 
             renderPharmacistNoteHistory(data.hn);
@@ -823,13 +788,12 @@
         function onAssessmentDateSelect() {
             const idx = parseInt(document.getElementById('assessmentDateSelect').value, 10);
             renderAssessmentEntry(idx);
-            clearQuickTabActive();
         }
 
         function markQuickTabsData() {
             [7, 14, 42].forEach(offset => {
                 const el = document.getElementById('quickTab' + offset);
-                el.classList.remove('has-data', 'unread', 'active');
+                el.classList.remove('has-data', 'unread');
                 const match = findClosestEntry(offset);
                 if (match) {
                     el.classList.add('has-data');
@@ -852,44 +816,14 @@
             return closest;
         }
 
-        function clearQuickTabActive() {
-            [7, 14, 42].forEach(offset => document.getElementById('quickTab' + offset).classList.remove('active'));
-        }
-
-        function selectQuickTab(offsetDays) {
-            const entry = findClosestEntry(offsetDays);
-            clearQuickTabActive();
-            document.getElementById('quickTab' + offsetDays).classList.add('active');
-            
-            const select = document.getElementById('assessmentDateSelect');
-            select.selectedIndex = -1;
-
-            if (!entry) {
-                document.getElementById('timeAssess').innerText = 'ยังไม่มีข้อมูลช่วงนี้';
-                document.getElementById('assessmentContent').innerHTML = `
-                    <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12 mt-4">
-                        <i class="fa-regular fa-calendar-xmark text-5xl mb-4 text-slate-200"></i>
-                        <p class="text-sm font-medium">ยังไม่มีการประเมินสำหรับช่วงติดตามนี้</p>
-                    </div>
-                `;
-                document.getElementById('detailUnreadBadge').classList.add('hidden');
-                return;
-            }
-            const idx = currentAssessmentHistory.indexOf(entry);
-            select.value = idx;
-            renderAssessmentEntry(idx, true);
-        }
-
-        function renderAssessmentEntry(idx, skipTabClear) {
+        function renderAssessmentEntry(idx) {
             if (idx < 0 || idx >= currentAssessmentHistory.length) return;
             currentAssessmentIndex = idx;
             const entry = currentAssessmentHistory[idx];
             document.getElementById('assessmentDateSelect').value = idx;
-            if (!skipTabClear) clearQuickTabActive();
 
             document.getElementById('timeAssess').innerText = formatDateTimeFull(entry.timestamp);
 
-            // เพิ่มพารามิเตอร์ hideImage เพื่อซ่อนกรอบรูปภาพตามที่ระบุ
             const renderSymptom = (answer, label, photoUrl, hideImage = false) => {
                 if (answer === 'yes') {
                     let imageHtml = '';
@@ -956,13 +890,11 @@
                 ${renderCustomSymptom(entry.symp5, entry.symp5Text, entry.photo5)}
             `;
 
-            // บันทึกสถานะการอ่าน (Read Status) ทันทีที่เปิดดู
             if (entry.viewed === false) {
                 entry.viewed = true;
                 viewedOverrides[currentPatientRow.hn] = viewedOverrides[currentPatientRow.hn] || {};
                 viewedOverrides[currentPatientRow.hn][entry.date] = true;
                 
-                // แจ้งไปยัง Backend ให้บันทึกลง Google Sheets ถาวร
                 fetch(GOOGLE_APP_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors', 
@@ -987,7 +919,6 @@
             }
         }
 
-        // ---------- Pharmacist notes ----------
         function renderPharmacistNoteHistory(hn) {
             const container = document.getElementById('pharmacistNoteHistory');
             const notes = pharmacistNotesStore[hn] || [];
@@ -1123,7 +1054,6 @@
             } catch (error) { alert("เกิดข้อผิดพลาด"); } finally { btn.innerHTML = 'บันทึกข้อมูล'; btn.disabled = false; }
         }
 
-        // ---------- Statistics view ----------
         function renderStatsView() {
             const total = allPatientsData.length;
             let highRisk = 0, pending = 0, normal = 0, overdue = 0;
