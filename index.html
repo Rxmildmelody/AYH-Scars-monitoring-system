@@ -1044,34 +1044,33 @@
             const hn = currentPatientRow.hn;
             const recorder = document.getElementById('noteRecorder').value || 'เภสัชกร';
             
-            // หาข้อมูล Assessment ID และ Follow Up ID
             const fUps = currentPatientRow.followUps || [];
             const pendingFu = fUps.find(f => f.status === 'PENDING' && f.riskStatusSnapshot === 'HIGH');
-            const followUpId = pendingFu ? pendingFu.followUpId : null;
-            const assessmentId = pendingFu ? pendingFu.assessmentId : null;
-            const patientId = currentPatientRow.patientId || hn;
+            const followUpId = pendingFu ? pendingFu.followUpId : "";
+            const assessmentId = pendingFu ? pendingFu.assessmentId : "";
+            const patientId = currentPatientRow.patientId || hn || "";
 
             console.log("[FU] Submit Follow-up Request");
             console.log("[FU] Patient ID / HN:", patientId, "/", hn);
             console.log("[FU] Assessment ID:", assessmentId);
             console.log("[FU] Follow-up ID:", followUpId);
             console.log("[FU] Follow-up Date:", fuDate);
-            console.log("[FU] Note:", note);
             
             const btn = document.getElementById('saveFuBtn');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...'; 
             btn.disabled = true;
             
             try {
+                // เซ็ตค่าให้เป็น String แน่นอน 100% ป้องกัน JSON null ทำระบบพัง
                 const payload = {
                     action: 'save_high_risk_followup',
-                    hn: hn, 
-                    patientId: patientId,
-                    assessmentId: assessmentId,
-                    followUpId: followUpId,
-                    followUpDate: fuDate, 
-                    note: note, 
-                    recorder: recorder
+                    hn: hn || "", 
+                    patientId: patientId || "",
+                    assessmentId: assessmentId || "",
+                    followUpId: followUpId || "",
+                    followUpDate: fuDate || "", 
+                    note: note || "", 
+                    recorder: recorder || ""
                 };
 
                 const res = await fetch(GOOGLE_APP_SCRIPT_URL, {
@@ -1086,7 +1085,7 @@
 
                 const result = await res.json();
                 
-                // ถ้ายืนยันจาก Google Sheets ว่าสำเร็จแล้วเท่านั้น ถึงเปลี่ยน UI ให้
+                // ถ้ายืนยันจาก Backend สำเร็จแล้วเท่านั้น ถึงเปลี่ยน UI ให้
                 if (result.status === 'success') {
                     console.log("[FU] Google Sheets Update Success");
 
@@ -1109,7 +1108,6 @@
                         });
                     }
                     
-                    // Render UI ใหม่ (เปลี่ยนจากกล่องแดงเป็นเขียว)
                     checkHighRiskActionRequired();
                     document.getElementById('detailStatus').innerHTML = getStatusBadge(currentPatientRow.status, currentPatientRow);
                     
