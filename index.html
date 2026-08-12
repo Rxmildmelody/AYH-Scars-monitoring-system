@@ -1185,8 +1185,81 @@
             }, 2000);
         }
 
-        function printA5PDF() { /* ... */ }
-        async function submitForm(event) { /* ... */ }
+        function printA5PDF() {
+            const hn = document.getElementById('detailHN').innerText;
+            const name = document.getElementById('detailName').innerText;
+            const qrSrc = document.getElementById('detailQR').src;
+
+            const printWin = window.open('', '_blank');
+            printWin.document.write(`
+                <html><head><title>สมุดประจำตัวผู้ป่วย (PDF)</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+                    @page { size: A5 portrait; margin: 0; }
+                    body { font-family: 'Sarabun', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; background: #fff; }
+                    .container { border: 4px solid #1e3a8a; padding: 40px; border-radius: 16px; width: 80%; }
+                    h1 { color: #1e3a8a; font-size: 24px; margin-bottom: 5px; }
+                    p { font-size: 18px; color: #333; margin-top: 0; }
+                    img { width: 180px; height: 180px; margin: 20px 0; border: 2px solid #ccc; padding: 10px; border-radius: 10px; }
+                    .footer { font-size: 14px; color: #666; margin-top: 20px; }
+                </style></head>
+                <body><div class="container">
+                    <h1>สมุดประจำตัวผู้ป่วย</h1><p>เฝ้าระวังอาการแพ้ยารุนแรง (SCARs)</p>
+                    <hr style="border:1px solid #eee; width:80%; margin:20px auto;">
+                    <p><b>${name}</b><br><span style="font-size:16px">${hn}</span></p>
+                    <img src="${qrSrc}" alt="QR Code">
+                    <p class="footer">โปรดสแกน QR Code เพื่อทำแบบประเมิน</p>
+                </div>
+                <script>setTimeout(() => { window.print(); window.close(); }, 800);<\/script>
+                </body></html>
+            `);
+            printWin.document.close();
+        }
+
+        async function submitForm(event) {
+            event.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const trackingSelect = document.getElementById('trackingChannel').value;
+            const trackingOther = document.getElementById('trackingChannelOther').value;
+            
+            const payload = {
+                action: 'add_patient', 
+                hn: document.getElementById('hn').value, 
+                name: document.getElementById('patientName').value,
+                phone: document.getElementById('phone').value,
+                trackingChannel: trackingSelect === 'other' ? trackingOther : trackingSelect,
+                drug: document.getElementById('drug').value, 
+                date: document.getElementById('startDate').value, 
+                history: document.getElementById('allergyHistory').value
+            };
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...'; 
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch(GOOGLE_APP_SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify(payload), 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
+                });
+                const result = await res.json();
+                
+                if(result.status === 'success') {
+                    document.getElementById('addPatientForm').reset();
+                    toggleTrackingChannel();
+                    toggleModal('addPatientModal');
+                    loadData();
+                } else {
+                    alert("ไม่สามารถบันทึกข้อมูลได้: " + (result.message || "เกิดข้อผิดพลาด"));
+                }
+            } catch (error) { 
+                console.error("Add Patient Error:", error);
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อระบบ"); 
+            } finally { 
+                btn.innerHTML = 'บันทึกข้อมูล'; 
+                btn.disabled = false; 
+            }
+        }
 
         function renderStatsView() {
             const total = allPatientsData.length;
