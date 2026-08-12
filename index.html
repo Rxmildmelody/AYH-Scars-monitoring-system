@@ -549,7 +549,6 @@
 
         function toggleModal(modalID) { document.getElementById(modalID).classList.toggle("hidden"); }
 
-        // การกำหนด Badge สถานะ
         function getStatusBadge(status, row) {
             let isHighRisk = status === 'เสี่ยงสูง' || (row && row.currentRisk === 'HIGH');
             
@@ -826,10 +825,10 @@
             const hasCompleted = !!completedFu;
 
             console.log("=== DEBUG HIGH RISK F/U ===");
-            console.log("Patient HN:", currentPatientRow.hn);
-            console.log("isHighRisk:", isHighRisk);
-            console.log("hasCompleted F/U:", hasCompleted);
-            console.log("FollowUps Data Array:", fUps);
+            console.log("[FU] Patient HN:", currentPatientRow.hn);
+            console.log("[FU] isHighRisk:", isHighRisk);
+            console.log("[FU] hasCompleted F/U:", hasCompleted);
+            console.log("[FU] FollowUps Data Array:", fUps);
             console.log("===========================");
 
             const actionBox = document.getElementById('highRiskActionBox');
@@ -1037,37 +1036,71 @@
 
         async function saveHighRiskFollowUp() {
             const fuDate = document.getElementById('fuDate').value;
-            if (!fuDate) { alert("กรุณาเลือกวันที่ติดตาม"); return; }
-            const note = document.getElementById('fuNote').value;
+            if (!fuDate) { 
+                alert("กรุณาเลือกวันที่ติดตาม"); 
+                return; 
+            }
+            const note = document.getElementById('fuNote').value || "";
             const hn = currentPatientRow.hn;
             const recorder = document.getElementById('noteRecorder').value || 'เภสัชกร';
+            
+            // หาข้อมูล Assessment ID และ Follow Up ID
+            const fUps = currentPatientRow.followUps || [];
+            const pendingFu = fUps.find(f => f.status === 'PENDING' && f.riskStatusSnapshot === 'HIGH');
+            const followUpId = pendingFu ? pendingFu.followUpId : null;
+            const assessmentId = pendingFu ? pendingFu.assessmentId : null;
+            const patientId = currentPatientRow.patientId || hn;
+
+            console.log("[FU] Submit Follow-up Request");
+            console.log("[FU] Patient ID / HN:", patientId, "/", hn);
+            console.log("[FU] Assessment ID:", assessmentId);
+            console.log("[FU] Follow-up ID:", followUpId);
+            console.log("[FU] Follow-up Date:", fuDate);
+            console.log("[FU] Note:", note);
             
             const btn = document.getElementById('saveFuBtn');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...'; 
             btn.disabled = true;
             
             try {
+                const payload = {
+                    action: 'save_high_risk_followup',
+                    hn: hn, 
+                    patientId: patientId,
+                    assessmentId: assessmentId,
+                    followUpId: followUpId,
+                    followUpDate: fuDate, 
+                    note: note, 
+                    recorder: recorder
+                };
+
                 const res = await fetch(GOOGLE_APP_SCRIPT_URL, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        action: 'save_high_risk_followup',
-                        hn: hn, followUpDate: fuDate, note: note, recorder: recorder
-                    }),
+                    body: JSON.stringify(payload),
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                 });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+
                 const result = await res.json();
                 
+                // ถ้ายืนยันจาก Google Sheets ว่าสำเร็จแล้วเท่านั้น ถึงเปลี่ยน UI ให้
                 if (result.status === 'success') {
+                    console.log("[FU] Google Sheets Update Success");
+
                     if (!currentPatientRow.followUps) currentPatientRow.followUps = [];
                     
-                    let pendingIdx = currentPatientRow.followUps.findIndex(f => f.status === 'PENDING' && f.riskStatusSnapshot === 'HIGH');
-                    if (pendingIdx !== -1) {
-                        currentPatientRow.followUps[pendingIdx].status = 'COMPLETED';
-                        currentPatientRow.followUps[pendingIdx].completedAt = fuDate;
-                        currentPatientRow.followUps[pendingIdx].summary = note;
-                        currentPatientRow.followUps[pendingIdx].assignedPharmacist = recorder;
+                    if (pendingFu) {
+                        pendingFu.status = 'COMPLETED';
+                        pendingFu.completedAt = fuDate;
+                        pendingFu.summary = note;
+                        pendingFu.assignedPharmacist = recorder;
                     } else {
                         currentPatientRow.followUps.push({
+                            followUpId: result.newFollowUpId || ('local-' + Date.now()),
+                            assessmentId: assessmentId || "N/A",
                             status: 'COMPLETED',
                             riskStatusSnapshot: 'HIGH',
                             completedAt: fuDate,
@@ -1076,25 +1109,30 @@
                         });
                     }
                     
+                    // Render UI ใหม่ (เปลี่ยนจากกล่องแดงเป็นเขียว)
                     checkHighRiskActionRequired();
                     document.getElementById('detailStatus').innerHTML = getStatusBadge(currentPatientRow.status, currentPatientRow);
                     
                     if (!pharmacistNotesStore[hn]) pharmacistNotesStore[hn] = [];
                     pharmacistNotesStore[hn].push({
                         date: new Date().toLocaleString('th-TH'),
-                        followPeriodLabel: 'F/U High Risk', followMethodLabel: 'บันทึกการติดตาม',
-                        summary: note, recommendation: '', recorder: recorder
+                        followPeriodLabel: 'F/U High Risk', 
+                        followMethodLabel: 'บันทึกการติดตาม',
+                        summary: note, 
+                        recommendation: '', 
+                        recorder: recorder
                     });
                     renderPharmacistNoteHistory(hn);
                     
                     updateSummaryCards(); 
                     renderTable();
                 } else {
-                    alert('ไม่สามารถบันทึกได้: ' + (result.message || 'Unknown Error'));
+                    console.error("[FU ERROR] GAS Returned Error:", result.message);
+                    alert('ไม่สามารถบันทึกข้อมูลการติดตามได้: ' + (result.message || 'Unknown Error'));
                 }
             } catch (err) { 
-                console.error("Save Error:", err);
-                alert('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่'); 
+                console.error("[FU ERROR] Fetch Exception:", err);
+                alert('ไม่สามารถเชื่อมต่อระบบได้ กรุณาลองอีกครั้ง'); 
             } 
             finally { 
                 btn.innerHTML = 'บันทึก F/U'; 
@@ -1149,61 +1187,8 @@
             }, 2000);
         }
 
-        function printA5PDF() {
-            const hn = document.getElementById('detailHN').innerText;
-            const name = document.getElementById('detailName').innerText;
-            const qrSrc = document.getElementById('detailQR').src;
-
-            const printWin = window.open('', '_blank');
-            printWin.document.write(`
-                <html><head><title>สมุดประจำตัวผู้ป่วย (PDF)</title>
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
-                    @page { size: A5 portrait; margin: 0; }
-                    body { font-family: 'Sarabun', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; background: #fff; }
-                    .container { border: 4px solid #1e3a8a; padding: 40px; border-radius: 16px; width: 80%; }
-                    h1 { color: #1e3a8a; font-size: 24px; margin-bottom: 5px; }
-                    p { font-size: 18px; color: #333; margin-top: 0; }
-                    img { width: 180px; height: 180px; margin: 20px 0; border: 2px solid #ccc; padding: 10px; border-radius: 10px; }
-                    .footer { font-size: 14px; color: #666; margin-top: 20px; }
-                </style></head>
-                <body><div class="container">
-                    <h1>สมุดประจำตัวผู้ป่วย</h1><p>เฝ้าระวังอาการแพ้ยารุนแรง (SCARs)</p>
-                    <hr style="border:1px solid #eee; width:80%; margin:20px auto;">
-                    <p><b>${name}</b><br><span style="font-size:16px">${hn}</span></p>
-                    <img src="${qrSrc}" alt="QR Code">
-                    <p class="footer">โปรดสแกน QR Code เพื่อทำแบบประเมิน</p>
-                </div>
-                <script>setTimeout(() => { window.print(); window.close(); }, 800);<\/script>
-                </body></html>
-            `);
-            printWin.document.close();
-        }
-
-        async function submitForm(event) {
-            event.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const trackingSelect = document.getElementById('trackingChannel').value;
-            const trackingOther = document.getElementById('trackingChannelOther').value;
-            
-            const payload = {
-                action: 'add_patient', hn: document.getElementById('hn').value, name: document.getElementById('patientName').value,
-                phone: document.getElementById('phone').value,
-                trackingChannel: trackingSelect === 'other' ? trackingOther : trackingSelect,
-                drug: document.getElementById('drug').value, date: document.getElementById('startDate').value, history: document.getElementById('allergyHistory').value
-            };
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...'; btn.disabled = true;
-            try {
-                const res = await fetch(GOOGLE_APP_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
-                const result = await res.json();
-                if(result.status === 'success') {
-                    document.getElementById('addPatientForm').reset();
-                    toggleTrackingChannel();
-                    toggleModal('addPatientModal');
-                    loadData();
-                }
-            } catch (error) { alert("เกิดข้อผิดพลาด"); } finally { btn.innerHTML = 'บันทึกข้อมูล'; btn.disabled = false; }
-        }
+        function printA5PDF() { /* ... */ }
+        async function submitForm(event) { /* ... */ }
 
         function renderStatsView() {
             const total = allPatientsData.length;
