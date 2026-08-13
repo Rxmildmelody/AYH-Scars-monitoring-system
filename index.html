@@ -421,8 +421,7 @@
         // 🌟 ตั้งค่า URL ส่วนสำคัญ 🌟
         const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwxZwMrptwaPyGSCCiYQzv8M0ejdtcC7b1PF5KfuU02HPtdPmfx20LUklIFqVYGnmNC/exec';
         const LIFF_URL_BASE = 'https://liff.line.me/2010995687-3szXwNXK?hn=';
-        const LOOKER_STUDIO_URL = "https://datastudio.google.com/embed/reporting/da91b4eb-4c3c-4b85-a5d8-c19525c8b778/page/dq35F"; // 🔴 เปลี่ยน URL ที่นี่เพื่อใช้งาน Looker Studio
-
+       
         let allPatientsData = [];
         let filteredData = [];
         let currentPage = 1;
@@ -611,26 +610,35 @@
         // ------------------------------------------------------------------
         // UI INTERACTION
         // ------------------------------------------------------------------
+       const LOOKER_STUDIO_URL = "https://datastudio.google.com/embed/reporting/da91b4eb-4c3c-4b85-a5d8-c19525c8b778/page/dq35F";
+
         function initLookerStudio() {
             const iframe = document.getElementById('lookerIframe');
             const link = document.getElementById('lookerDirectLink');
             
-            if (LOOKER_STUDIO_URL && LOOKER_STUDIO_URL !== "https://datastudio.google.com/embed/reporting/da91b4eb-4c3c-4b85-a5d8-c19525c8b778/page/dq35F") {
-                iframe.src = LOOKER_STUDIO_URL;
-                link.href = LOOKER_STUDIO_URL;
+            if (LOOKER_STUDIO_URL && LOOKER_STUDIO_URL !== "ใส่_LINK_GOOGLE_LOOKER_STUDIO_ตรงนี้" && LOOKER_STUDIO_URL !== "") {
+                if(iframe) iframe.src = LOOKER_STUDIO_URL;
+                if(link) link.href = LOOKER_STUDIO_URL;
             } else {
-                document.getElementById('lookerLoading').classList.add('hidden');
+                const loadingDiv = document.getElementById('lookerLoading');
+                if(loadingDiv) loadingDiv.classList.add('hidden');
+                
                 const errDiv = document.getElementById('lookerError');
-                errDiv.classList.remove('hidden');
-                errDiv.classList.add('flex');
+                if(errDiv) {
+                    errDiv.classList.remove('hidden');
+                    errDiv.classList.add('flex');
+                }
             }
         }
 
         function hideLookerLoading() {
-            if (document.getElementById('lookerIframe').src) {
-                document.getElementById('lookerLoading').classList.add('hidden');
-                document.getElementById('lookerIframe').classList.remove('hidden');
-                document.getElementById('lookerIframe').classList.add('block');
+            const iframe = document.getElementById('lookerIframe');
+            if (iframe && iframe.src) {
+                const loadingDiv = document.getElementById('lookerLoading');
+                if(loadingDiv) loadingDiv.classList.add('hidden');
+                
+                iframe.classList.remove('hidden');
+                iframe.classList.add('block');
             }
         }
 
@@ -1353,7 +1361,7 @@
         }
 
         window.onload = () => { 
-            initLookerStudio();
+            initLookerStudio(); // 🔴 เพิ่มบรรทัดนี้เพื่อสั่งให้โหลดสถิติ
             loadData().then(() => {
                 startAutoRefresh();
             }); 
