@@ -6,6 +6,7 @@
     <title>SCARs Monitoring System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; }
@@ -421,7 +422,8 @@
         // 🌟 ตั้งค่า URL ส่วนสำคัญ 🌟
         const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwxZwMrptwaPyGSCCiYQzv8M0ejdtcC7b1PF5KfuU02HPtdPmfx20LUklIFqVYGnmNC/exec';
         const LIFF_URL_BASE = 'https://liff.line.me/2010995687-3szXwNXK?hn=';
-       
+        const LOOKER_STUDIO_URL = "https://datastudio.google.com/embed/reporting/da91b4eb-4c3c-4b85-a5d8-c19525c8b778/page/dq35F";
+
         let allPatientsData = [];
         let filteredData = [];
         let currentPage = 1;
@@ -610,8 +612,6 @@
         // ------------------------------------------------------------------
         // UI INTERACTION
         // ------------------------------------------------------------------
-       const LOOKER_STUDIO_URL = "https://datastudio.google.com/embed/reporting/da91b4eb-4c3c-4b85-a5d8-c19525c8b778/page/dq35F";
-
         function initLookerStudio() {
             const iframe = document.getElementById('lookerIframe');
             const link = document.getElementById('lookerDirectLink');
@@ -1352,7 +1352,6 @@
                     alert("ไม่สามารถบันทึกข้อมูลได้: " + (result.message || "เกิดข้อผิดพลาด"));
                 }
             } catch (error) { 
-                console.error("Add Patient Error:", error);
                 alert("เกิดข้อผิดพลาดในการเชื่อมต่อระบบ"); 
             } finally { 
                 btn.innerHTML = 'บันทึกข้อมูล'; 
@@ -1361,7 +1360,7 @@
         }
 
         window.onload = () => { 
-            initLookerStudio(); // 🔴 เพิ่มบรรทัดนี้เพื่อสั่งให้โหลดสถิติ
+            initLookerStudio(); 
             loadData().then(() => {
                 startAutoRefresh();
             }); 
