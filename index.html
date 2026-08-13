@@ -257,7 +257,7 @@
         <div class="bg-white w-full max-w-7xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="max-height: 95vh;">
             <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800 text-white">
                 <h3 class="text-lg font-bold"><i class="fa-regular fa-folder-open text-blue-400 mr-2"></i> แฟ้มประวัติและการติดตามผู้ป่วย</h3>
-                <button type="button" onclick="toggleModal('patientDetailsModal')" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
+                <button type="button" onclick="closeDetailsModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-2xl"></i></button>
             </div>
 
             <div class="p-6 flex-1 overflow-y-auto grid grid-cols-12 gap-6 bg-slate-100/50">
@@ -449,28 +449,70 @@
         let currentAssessmentIndex = -1;
         let statusChartInstance = null;
         let drugChartInstance = null;
+        
+        let isModalOpen = false; // ใช้เช็คสถานะว่าเปิดแฟ้มคนไข้อยู่ไหม
+        let autoRefreshTimer = null; // ตัวแปรเก็บ Timer
 
+        // ฟังก์ชันกลางในการแปลงวันที่เป็นรูปแบบ HH.MM น. D/M/YY (Asia/Bangkok)
+        function formatThaiDateTime(rawDate, forceDateOnly = false) {
+            if (!rawDate || rawDate === 'ไม่มีข้อมูล' || rawDate === '-') return "-";
+            
+            let d = new Date(rawDate);
+            if (isNaN(d.getTime())) return rawDate; // Fallback หากแปลงไม่ได้
+
+            let hasTime = false;
+            if (typeof rawDate === 'string') {
+                if (rawDate.includes('T') || rawDate.includes(':') || rawDate.includes(' ')) {
+                    hasTime = true;
+                }
+            } else if (rawDate instanceof Date) {
+                hasTime = true;
+            }
+
+            if (forceDateOnly) hasTime = false;
+
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Bangkok',
+                day: 'numeric', month: 'numeric', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: false
+            });
+            
+            const parts = formatter.formatToParts(d);
+            let day, month, year, hour, minute;
+            parts.forEach(p => {
+                if (p.type === 'day') day = p.value;
+                if (p.type === 'month') month = p.value;
+                if (p.type === 'year') year = p.value;
+                if (p.type === 'hour') hour = p.value;
+                if (p.type === 'minute') minute = p.value;
+            });
+
+            const thaiYear = parseInt(year, 10) + 543;
+            const shortThaiYear = thaiYear.toString().slice(-2);
+            const cleanDay = parseInt(day, 10).toString();
+            const cleanMonth = parseInt(month, 10).toString();
+            
+            const dateStr = `${cleanDay}/${cleanMonth}/${shortThaiYear}`;
+
+            if (hasTime) {
+                let hr = hour === '24' ? '00' : hour.padStart(2, '0');
+                return `${hr}.${minute} น. ${dateStr}`;
+            } else {
+                return dateStr;
+            }
+        }
+
+        // คงฟังก์ชันเดิมไว้เป็น Wrapper เพื่อไม่ให้โค้ดส่วนอื่นได้รับผลกระทบ
         function toDDMMYYYY(dateObj) {
-            if (isNaN(dateObj.getTime())) return "-";
-            const dd = String(dateObj.getDate()).padStart(2, '0');
-            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const yyyy = dateObj.getFullYear() + 543;
-            return `${dd}/${mm}/${yyyy}`;
+            return formatThaiDateTime(dateObj, true);
         }
 
         function formatDateTimeFull(rawDateStr) {
-            if (!rawDateStr || rawDateStr === 'ไม่มีข้อมูล') return "ยังไม่มีข้อมูล";
-            const d = new Date(rawDateStr);
-            if (isNaN(d.getTime())) return rawDateStr;
-            const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-            return `${timeStr} น. • ${toDDMMYYYY(d)}`;
+            return formatThaiDateTime(rawDateStr);
         }
 
         function formatDateString(dateStr) {
-            if(!dateStr) return "-";
-            const d = new Date(dateStr);
-            if(isNaN(d.getTime())) return dateStr;
-            return toDDMMYYYY(d);
+            return formatThaiDateTime(dateStr, true);
         }
 
         function getFollowPeriodName(diffDays) {
@@ -547,7 +589,16 @@
             method === 'other' ? otherInput.classList.remove('hidden') : otherInput.classList.add('hidden');
         }
 
-        function toggleModal(modalID) { document.getElementById(modalID).classList.toggle("hidden"); }
+        function toggleModal(modalID) { 
+            const modal = document.getElementById(modalID);
+            modal.classList.toggle("hidden"); 
+        }
+
+        // จัดการเปิด/ปิด Modal แยกต่างหาก เพื่อ Set Flag ป้องกันการ Refresh ทับ
+        function closeDetailsModal() {
+            document.getElementById('patientDetailsModal').classList.add("hidden");
+            isModalOpen = false;
+        }
 
         function getStatusBadge(status, row) {
             let isHighRisk = status === 'เสี่ยงสูง' || (row && row.currentRisk === 'HIGH');
@@ -572,10 +623,24 @@
             return `<span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">${status}</span>`;
         }
 
+        // =====================================
+        // ระบบ AUTO REFRESH (แบบปลอดภัย ไม่พัง)
+        // =====================================
+        function startAutoRefresh() {
+            if (autoRefreshTimer) clearTimeout(autoRefreshTimer);
+            console.log("[AUTO REFRESH] Scheduled for next 15s");
+            autoRefreshTimer = setTimeout(async () => {
+                await loadData();
+                startAutoRefresh(); // เริ่มรอบใหม่เมื่ออันเก่าโหลดเสร็จแล้วเท่านั้น
+            }, 15000);
+        }
+
         async function loadData() {
             try {
+                console.log("[AUTO REFRESH] Fetching data...");
                 const response = await fetch(GOOGLE_APP_SCRIPT_URL + '?t=' + new Date().getTime());
                 const newData = await response.json();
+                console.log("[AUTO REFRESH] Data received");
 
                 if(JSON.stringify(newData) !== JSON.stringify(allPatientsData)) {
                     allPatientsData = newData;
@@ -585,10 +650,10 @@
                             pharmacistNotesStore[row.hn] = row.legacyNotes.map(n => {
                                 try {
                                     const parsed = JSON.parse(n.note);
-                                    return { ...parsed, date: parsed.date || new Date(n.timestamp).toLocaleString('th-TH') };
+                                    return { ...parsed, date: formatThaiDateTime(n.timestamp) };
                                 } catch(e) {
                                     return {
-                                        date: new Date(n.timestamp).toLocaleString('th-TH'),
+                                        date: formatThaiDateTime(n.timestamp),
                                         followPeriodLabel: 'บันทึกเก่า',
                                         followMethodLabel: '-',
                                         summary: n.note,
@@ -600,33 +665,33 @@
                         }
                     });
 
+                    // อัปเดตตารางและสถิติเป็น Background เสมอ
                     handleSearch();
                     updateSummaryCards();
                     if (currentView === 'stats') renderStatsView();
 
-                    const modal = document.getElementById('patientDetailsModal');
-                    if (!modal.classList.contains('hidden') && currentPatientRow) {
+                    // ⚠️ หาก Modal กำลังเปิดอยู่ ห้าม Re-render UI ทับ เพื่อป้องกันข้อมูลที่กรอกอยู่หาย
+                    if (isModalOpen && currentPatientRow) {
                         const updatedRow = allPatientsData.find(p => p.hn === currentPatientRow.hn);
                         if (updatedRow) {
+                            // อัปเดตเฉพาะตัวแปรเบื้องหลัง
                             currentPatientRow = updatedRow;
                             currentAssessmentHistory = getAssessmentHistory(updatedRow);
-                            document.getElementById('detailStatus').innerHTML = getStatusBadge(updatedRow.status, updatedRow);
                             
-                            checkHighRiskActionRequired();
-                            populateAssessmentDropdown();
+                            // อัปเดตเฉพาะบางส่วนที่ไม่กวน Form เช่น ป้ายสถานะ
+                            const statusElem = document.getElementById('detailStatus');
+                            if(statusElem) statusElem.innerHTML = getStatusBadge(updatedRow.status, updatedRow);
                             
-                            if (currentAssessmentHistory.length > 0) {
-                                let nextIdx = currentAssessmentIndex >= 0 && currentAssessmentIndex < currentAssessmentHistory.length ? currentAssessmentIndex : 0;
-                                const unreadIdx = currentAssessmentHistory.findIndex(e => e.viewed === false);
-                                if (unreadIdx !== -1) nextIdx = unreadIdx;
-                                renderAssessmentEntry(nextIdx, true);
-                            }
-                            renderPharmacistNoteHistory(updatedRow.hn);
+                            // (ปิดการเรียกฟังก์ชันวาดใหม่ทั้งหมด เช่น renderAssessmentEntry, checkHighRiskActionRequired)
+                            // เพราะหากเภสัชกำลังพิมพ์อยู่ แล้วระบบดึงไปวาดใหม่ Textarea จะถูก Reset หายเกลี้ยง
                         }
                     }
+                    console.log("[AUTO REFRESH] UI Update Completed");
                 }
-                document.getElementById('lastUpdateTime').innerText = new Date().toLocaleTimeString('th-TH') + ' น.';
-            } catch (error) { console.error("Auto-refresh failed", error); }
+                document.getElementById('lastUpdateTime').innerText = formatThaiDateTime(new Date());
+            } catch (error) { 
+                console.error("[AUTO REFRESH] Failed:", error); 
+            }
         }
 
         function getAssessmentHistory(row) {
@@ -824,13 +889,6 @@
             const completedFu = fUps.slice().reverse().find(f => f.status === 'COMPLETED' && f.riskStatusSnapshot === 'HIGH');
             const hasCompleted = !!completedFu;
 
-            console.log("=== DEBUG HIGH RISK F/U ===");
-            console.log("[FU] Patient HN:", currentPatientRow.hn);
-            console.log("[FU] isHighRisk:", isHighRisk);
-            console.log("[FU] hasCompleted F/U:", hasCompleted);
-            console.log("[FU] FollowUps Data Array:", fUps);
-            console.log("===========================");
-
             const actionBox = document.getElementById('highRiskActionBox');
             const formContainer = document.getElementById('highRiskFormContainer');
             const completedBox = document.getElementById('highRiskCompletedBox');
@@ -844,7 +902,8 @@
                     actionBox.classList.remove('hidden');
                 } else {
                     completedBox.classList.remove('hidden');
-                    document.getElementById('fuCompletedDate').innerText = formatDateString(completedFu.completedAt);
+                    // วันที่ที่ Pharmacist ตาม จะต้องแสดงเฉพาะวันตามดีไซน์ ยกเว้นมี Time ก็ให้โชว์ Time
+                    document.getElementById('fuCompletedDate').innerText = formatThaiDateTime(completedFu.completedAt, true);
                     document.getElementById('fuCompletedNote').innerText = completedFu.summary || '-';
                 }
             }
@@ -870,6 +929,7 @@
         }
 
         function openDetails(rowDataStr) {
+            isModalOpen = true; // ล็อกสถานะว่าเปิด Modal อยู่ (ป้องกัน Auto Refresh กวน)
             const data = JSON.parse(decodeURIComponent(rowDataStr));
             currentPatientRow = data;
 
@@ -878,7 +938,8 @@
             document.getElementById('detailDrug').innerText = data.drug;
             document.getElementById('detailTracking').innerText = data.trackingChannel || '-';
             document.getElementById('detailPhone').innerText = data.phone || '-';
-            document.getElementById('detailDate').innerText = data.startDate || data.date;
+            // ปรับ Format วันที่เริ่มยา
+            document.getElementById('detailDate').innerText = formatThaiDateTime(data.startDate || data.date, true);
             document.getElementById('detailStatus').innerHTML = getStatusBadge(data.status, data);
             document.getElementById('detailHistory').innerText = data.history || "-";
 
@@ -899,7 +960,8 @@
             const dd = String(today.getDate()).padStart(2, '0');
             document.getElementById('noteFollowPeriod').value = `${yyyy}-${mm}-${dd}`;
 
-            document.getElementById('timeRegister').innerText = data.regTimestamp || "ไม่มีข้อมูล";
+            // ปรับ Format เวลาลงทะเบียน
+            document.getElementById('timeRegister').innerText = data.regTimestamp ? formatThaiDateTime(data.regTimestamp) : "ไม่มีข้อมูล";
 
             currentAssessmentHistory = getAssessmentHistory(data);
             
@@ -952,6 +1014,7 @@
             currentAssessmentIndex = idx;
             const entry = currentAssessmentHistory[idx];
             document.getElementById('assessmentDateSelect').value = idx;
+            // ปรับ Format วันที่ผู้ป่วยทำแบบประเมิน
             document.getElementById('timeAssess').innerText = formatDateTimeFull(entry.timestamp);
 
             const renderSymptom = (answer, label, photoUrl, hideImage = false) => {
@@ -1049,19 +1112,12 @@
             const followUpId = pendingFu ? pendingFu.followUpId : "";
             const assessmentId = pendingFu ? pendingFu.assessmentId : "";
             const patientId = currentPatientRow.patientId || hn || "";
-
-            console.log("[FU] Submit Follow-up Request");
-            console.log("[FU] Patient ID / HN:", patientId, "/", hn);
-            console.log("[FU] Assessment ID:", assessmentId);
-            console.log("[FU] Follow-up ID:", followUpId);
-            console.log("[FU] Follow-up Date:", fuDate);
             
             const btn = document.getElementById('saveFuBtn');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังบันทึก...'; 
             btn.disabled = true;
             
             try {
-                // เซ็ตค่าให้เป็น String แน่นอน 100% ป้องกัน JSON null ทำระบบพัง
                 const payload = {
                     action: 'save_high_risk_followup',
                     hn: hn || "", 
@@ -1085,10 +1141,7 @@
 
                 const result = await res.json();
                 
-                // ถ้ายืนยันจาก Backend สำเร็จแล้วเท่านั้น ถึงเปลี่ยน UI ให้
                 if (result.status === 'success') {
-                    console.log("[FU] Google Sheets Update Success");
-
                     if (!currentPatientRow.followUps) currentPatientRow.followUps = [];
                     
                     if (pendingFu) {
@@ -1113,7 +1166,7 @@
                     
                     if (!pharmacistNotesStore[hn]) pharmacistNotesStore[hn] = [];
                     pharmacistNotesStore[hn].push({
-                        date: new Date().toLocaleString('th-TH'),
+                        date: formatThaiDateTime(new Date()), // แสดงผล Format วันที่ทันที
                         followPeriodLabel: 'F/U High Risk', 
                         followMethodLabel: 'บันทึกการติดตาม',
                         summary: note, 
@@ -1125,11 +1178,9 @@
                     updateSummaryCards(); 
                     renderTable();
                 } else {
-                    console.error("[FU ERROR] GAS Returned Error:", result.message);
                     alert('ไม่สามารถบันทึกข้อมูลการติดตามได้: ' + (result.message || 'Unknown Error'));
                 }
             } catch (err) { 
-                console.error("[FU ERROR] Fetch Exception:", err);
                 alert('ไม่สามารถเชื่อมต่อระบบได้ กรุณาลองอีกครั้ง'); 
             } 
             finally { 
@@ -1150,8 +1201,8 @@
             const followDateVal = periodSelect.value;
             const computedLabel = getFollowUpLabel(currentPatientRow.startDate || currentPatientRow.rawDate, followDateVal);
 
-            const note = {
-                date: now.toLocaleString('th-TH'),
+            const payloadNote = {
+                date: now.toLocaleString('th-TH'), // ยังคงเก็บข้อมูลต้นฉบับรูปแบบเดิมเข้า Google Sheets
                 followPeriod: followDateVal, followPeriodLabel: computedLabel, 
                 followMethod: methodSelect.value === 'other' ? methodOther : methodSelect.value,
                 followMethodLabel: methodSelect.value === 'other' ? (methodOther || 'อื่นๆ') : methodSelect.options[methodSelect.selectedIndex].text,
@@ -1160,13 +1211,18 @@
                 recorder: document.getElementById('noteRecorder').value || 'เภสัชกร'
             };
 
+            const uiNote = {
+                ...payloadNote,
+                date: formatThaiDateTime(now) // แสดงผลบนหน้าจอด้วย Format ใหม่
+            };
+
             const hn = currentPatientRow.hn;
             if (!pharmacistNotesStore[hn]) pharmacistNotesStore[hn] = [];
-            pharmacistNotesStore[hn].push(note);
+            pharmacistNotesStore[hn].push(uiNote);
 
             try {
                 await fetch(GOOGLE_APP_SCRIPT_URL, {
-                    method: 'POST', body: JSON.stringify({ action: 'add_pharmacist_note', hn, note: JSON.stringify(note) }),
+                    method: 'POST', body: JSON.stringify({ action: 'add_pharmacist_note', hn, note: JSON.stringify(payloadNote) }),
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
                 });
             } catch (e) { }
@@ -1248,7 +1304,9 @@
                     document.getElementById('addPatientForm').reset();
                     toggleTrackingChannel();
                     toggleModal('addPatientModal');
-                    loadData();
+                    
+                    // บังคับโหลดข้อมูลใหม่ให้เห็นทันที
+                    await loadData();
                 } else {
                     alert("ไม่สามารถบันทึกข้อมูลได้: " + (result.message || "เกิดข้อผิดพลาด"));
                 }
@@ -1306,7 +1364,8 @@
             document.getElementById('statHighRisk').innerText = highRisk;
             document.getElementById('statOverdue').innerText = overdue;
             document.getElementById('statFUToday').innerText = fuToday;
-            document.getElementById('statsUpdatedAt').innerText = new Date().toLocaleTimeString('th-TH') + ' น.';
+            // ปรับ Format เวลาอัปเดตสถิติ
+            document.getElementById('statsUpdatedAt').innerText = formatThaiDateTime(new Date());
 
             const statusCtx = document.getElementById('statusChart');
             if (statusChartInstance) statusChartInstance.destroy();
@@ -1340,7 +1399,13 @@
             });
         }
 
-        window.onload = () => { loadData(); setInterval(loadData, 15000); toggleOtherMethod(); toggleTrackingChannel(); };
+        window.onload = () => { 
+            loadData().then(() => {
+                startAutoRefresh(); // เริ่มต้น Auto Refresh ตัวใหม่ที่ดีกว่าเดิม 🚀
+            }); 
+            toggleOtherMethod(); 
+            toggleTrackingChannel(); 
+        };
     </script>
 </body>
 </html>
