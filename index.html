@@ -6,7 +6,6 @@
     <title>SCARs Monitoring System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; }
@@ -144,41 +143,29 @@
                 </div>
             </div>
 
-            <!-- ============ STATISTICS VIEW ============ -->
-            <div id="view-stats" class="view-section">
-                <div class="grid grid-cols-3 gap-6 mb-6">
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm col-span-1">
-                        <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-pie text-blue-600"></i> สัดส่วนสถานะผู้ป่วย</h4>
-                        <canvas id="statusChart" height="220"></canvas>
+            <!-- ============ LOOKER STUDIO STATISTICS VIEW ============ -->
+            <div id="view-stats" class="view-section min-h-[600px] h-[calc(100vh-140px)]">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm w-full h-full flex flex-col overflow-hidden relative">
+                    
+                    <!-- Loading State -->
+                    <div id="lookerLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
+                        <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i>
+                        <p class="text-slate-500 font-medium">กำลังโหลดข้อมูลสถิติ...</p>
                     </div>
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm col-span-2">
-                        <h4 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-pills text-blue-600"></i> จำนวนผู้ป่วยแยกตามยาที่เฝ้าระวัง</h4>
-                        <canvas id="drugChart" height="140"></canvas>
+
+                    <!-- Error State (If URL is not set) -->
+                    <div id="lookerError" class="absolute inset-0 hidden flex-col items-center justify-center bg-white z-20">
+                        <i class="fa-solid fa-chart-bar text-4xl mb-4 text-slate-300"></i>
+                        <p class="text-slate-500 font-medium mb-4" id="lookerErrorMsg">ไม่สามารถโหลดข้อมูลสถิติได้ กรุณาตรวจสอบการเชื่อมต่อหรือสิทธิ์การเข้าถึง Google Looker Studio</p>
+                        <a href="#" id="lookerDirectLink" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm transition flex items-center gap-2">
+                            <i class="fa-solid fa-external-link-alt"></i> เปิด Google Looker Studio
+                        </a>
                     </div>
+
+                    <!-- Looker Studio iframe -->
+                    <iframe id="lookerIframe" class="w-full h-full border-0 hidden" src="" onload="hideLookerLoading()" allowfullscreen></iframe>
+                
                 </div>
-                <div class="grid grid-cols-5 gap-4">
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                        <p class="text-xs text-slate-500 mb-1">ผู้ป่วยทั้งหมดในระบบ</p>
-                        <p class="text-3xl font-bold text-slate-800" id="statTotal">0</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                        <p class="text-xs text-slate-500 mb-1">อัตราการตอบประเมิน</p>
-                        <p class="text-3xl font-bold text-blue-600" id="statResponseRate">0%</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                        <p class="text-xs text-slate-500 mb-1">ผู้ป่วยเสี่ยงสูง (รอ F/U)</p>
-                        <p class="text-3xl font-bold text-red-600" id="statHighRisk">0</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center">
-                        <p class="text-xs text-slate-500 mb-1">ค้างตอบเกิน 24 ชม.</p>
-                        <p class="text-3xl font-bold text-orange-600" id="statOverdue">0</p>
-                    </div>
-                    <div class="bg-teal-50 p-4 rounded-xl border border-teal-200 shadow-sm text-center">
-                        <p class="text-xs text-teal-700 font-bold mb-1">เภสัชกรติดตามแล้ว (วันนี้)</p>
-                        <p class="text-3xl font-bold text-teal-700" id="statFUToday">0</p>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-400 mt-6"><i class="fa-solid fa-circle-info mr-1"></i> สถิติคำนวณจากข้อมูลผู้ป่วยที่โหลดล่าสุด ณ เวลา <span id="statsUpdatedAt">-</span></p>
             </div>
 
         </div>
@@ -431,8 +418,10 @@
     </div>
 
     <script>
+        // 🌟 ตั้งค่า URL ส่วนสำคัญ 🌟
         const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwxZwMrptwaPyGSCCiYQzv8M0ejdtcC7b1PF5KfuU02HPtdPmfx20LUklIFqVYGnmNC/exec';
         const LIFF_URL_BASE = 'https://liff.line.me/2010995687-3szXwNXK?hn=';
+        const LOOKER_STUDIO_URL = "ใส่_LINK_GOOGLE_LOOKER_STUDIO_ตรงนี้"; // 🔴 เปลี่ยน URL ที่นี่เพื่อใช้งาน Looker Studio
 
         let allPatientsData = [];
         let filteredData = [];
@@ -447,8 +436,6 @@
         let currentPatientRow = null;
         let currentAssessmentHistory = [];
         let currentAssessmentIndex = -1;
-        let statusChartInstance = null;
-        let drugChartInstance = null;
         
         let isModalOpen = false;
         let autoRefreshTimer = null;
@@ -624,6 +611,29 @@
         // ------------------------------------------------------------------
         // UI INTERACTION
         // ------------------------------------------------------------------
+        function initLookerStudio() {
+            const iframe = document.getElementById('lookerIframe');
+            const link = document.getElementById('lookerDirectLink');
+            
+            if (LOOKER_STUDIO_URL && LOOKER_STUDIO_URL !== "ใส่_LINK_GOOGLE_LOOKER_STUDIO_ตรงนี้") {
+                iframe.src = LOOKER_STUDIO_URL;
+                link.href = LOOKER_STUDIO_URL;
+            } else {
+                document.getElementById('lookerLoading').classList.add('hidden');
+                const errDiv = document.getElementById('lookerError');
+                errDiv.classList.remove('hidden');
+                errDiv.classList.add('flex');
+            }
+        }
+
+        function hideLookerLoading() {
+            if (document.getElementById('lookerIframe').src) {
+                document.getElementById('lookerLoading').classList.add('hidden');
+                document.getElementById('lookerIframe').classList.remove('hidden');
+                document.getElementById('lookerIframe').classList.add('block');
+            }
+        }
+
         function toggleSidebar() {
             sidebarCollapsed = !sidebarCollapsed;
             const sidebar = document.getElementById('sidebar');
@@ -662,7 +672,6 @@
             } else if (view === 'stats') {
                 document.getElementById('pageHeaderTitle').innerText = 'ภาพรวมสถิติ';
                 document.getElementById('pageHeaderSubtitle').innerText = 'Adverse Event Surveillance — Statistics';
-                renderStatsView();
             }
         }
 
@@ -743,7 +752,6 @@
 
                     handleSearch();
                     updateSummaryCards();
-                    if (currentView === 'stats') renderStatsView();
 
                     if (isModalOpen && currentPatientRow) {
                         const updatedRow = allPatientsData.find(p => p.hn === currentPatientRow.hn);
@@ -802,23 +810,13 @@
         function countTotalUnread() { return allPatientsData.reduce((sum, row) => sum + countUnreadForRow(row), 0); }
 
         function updateSummaryCards() {
-            let highRisk = 0, pending = 0, normal = 0, overdue = 0, fuToday = 0;
-            const todayStr = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
+            let highRisk = 0, pending = 0, normal = 0, overdue = 0;
 
             allPatientsData.forEach(row => {
                 if (row.computedStatus === 'เสี่ยงสูง') highRisk++;
                 else if (row.computedStatus === 'ตอบช้า >24 ชม.') overdue++;
                 else if (row.computedStatus === 'รอตอบแบบประเมิน') pending++;
                 else normal++; 
-
-                if (row.followUps) {
-                    row.followUps.forEach(f => {
-                        if (f.status === 'COMPLETED' && f.completedAt) {
-                            const fDate = Utilities.formatDate(new Date(f.completedAt), "Asia/Bangkok", "yyyy-MM-dd");
-                            if (fDate === todayStr) fuToday++;
-                        }
-                    });
-                }
             });
 
             document.getElementById('countTotal').innerText = allPatientsData.length;
@@ -826,16 +824,6 @@
             document.getElementById('countPending').innerText = pending;
             document.getElementById('countOverdue').innerText = overdue;
             document.getElementById('countNormal').innerText = normal;
-            
-            if(document.getElementById('statTotal')) document.getElementById('statTotal').innerText = allPatientsData.length;
-            if(document.getElementById('statHighRisk')) document.getElementById('statHighRisk').innerText = highRisk;
-            if(document.getElementById('statOverdue')) document.getElementById('statOverdue').innerText = overdue;
-            if(document.getElementById('statFUToday')) document.getElementById('statFUToday').innerText = fuToday;
-            
-            const total = allPatientsData.length;
-            const responded = total - pending - overdue;
-            const responseRate = total > 0 ? Math.round((responded / total) * 100) : 0;
-            if(document.getElementById('statResponseRate')) document.getElementById('statResponseRate').innerText = responseRate + '%';
 
             const unread = countTotalUnread();
             document.getElementById('countUnread').innerText = unread;
@@ -1086,7 +1074,7 @@
                 } else {
                     imageHtml = `<p class="text-xs text-slate-400 mt-2"><i class="fa-regular fa-image mr-1"></i>ไม่มีรูปภาพแนบ (ไม่บังคับ)</p>`;
                 }
-                return `<div class="p-3 border border-purple-200 rounded-lg mb-3 bg-purple-50 shadow-sm fade-in"><p class="text-sm font-bold text-purple-700"><i class="fa-solid fa-comment-medical mr-1"></i> อา อาการเพิ่มเติมที่ผู้ป่วยระบุเอง</p><p class="text-sm text-purple-800 mt-1">${customText ? customText : '(ไม่ได้ระบุรายละเอียด)'}</p>${imageHtml}</div>`;
+                return `<div class="p-3 border border-purple-200 rounded-lg mb-3 bg-purple-50 shadow-sm fade-in"><p class="text-sm font-bold text-purple-700"><i class="fa-solid fa-comment-medical mr-1"></i> อาการเพิ่มเติมที่ผู้ป่วยระบุเอง</p><p class="text-sm text-purple-800 mt-1">${customText ? customText : '(ไม่ได้ระบุรายละเอียด)'}</p>${imageHtml}</div>`;
             };
 
             const assessmentContent = document.getElementById('assessmentContent');
@@ -1212,7 +1200,7 @@
                     
                     if (!pharmacistNotesStore[hn]) pharmacistNotesStore[hn] = [];
                     pharmacistNotesStore[hn].push({
-                        date: formatThaiDateTime(new Date()),
+                        date: formatThaiDateTime(new Date()), 
                         followPeriodLabel: 'F/U High Risk', 
                         followMethodLabel: 'บันทึกการติดตาม',
                         summary: note, 
@@ -1248,7 +1236,7 @@
             const computedLabel = getFollowUpLabel(currentPatientRow.startDate || currentPatientRow.rawDate, followDateVal);
 
             const payloadNote = {
-                date: now.toLocaleString('th-TH'), // ต้นฉบับบันทึกลง Sheets
+                date: now.toLocaleString('th-TH'), 
                 followPeriod: followDateVal, followPeriodLabel: computedLabel, 
                 followMethod: methodSelect.value === 'other' ? methodOther : methodSelect.value,
                 followMethodLabel: methodSelect.value === 'other' ? (methodOther || 'อื่นๆ') : methodSelect.options[methodSelect.selectedIndex].text,
@@ -1259,7 +1247,7 @@
 
             const uiNote = {
                 ...payloadNote,
-                date: formatThaiDateTime(now) // แสดงผลบนหน้าจอ Format ใหม่
+                date: formatThaiDateTime(now) 
             };
 
             const hn = currentPatientRow.hn;
@@ -1356,6 +1344,7 @@
                     alert("ไม่สามารถบันทึกข้อมูลได้: " + (result.message || "เกิดข้อผิดพลาด"));
                 }
             } catch (error) { 
+                console.error("Add Patient Error:", error);
                 alert("เกิดข้อผิดพลาดในการเชื่อมต่อระบบ"); 
             } finally { 
                 btn.innerHTML = 'บันทึกข้อมูล'; 
@@ -1363,72 +1352,8 @@
             }
         }
 
-        function renderStatsView() {
-            const total = allPatientsData.length;
-            let highRisk = 0, pending = 0, normal = 0, overdue = 0, fuToday = 0;
-            const drugCounts = {};
-            const todayStr = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd");
-
-            allPatientsData.forEach(row => {
-                if (row.computedStatus === 'เสี่ยงสูง') highRisk++;
-                else if (row.computedStatus === 'ตอบช้า >24 ชม.') overdue++;
-                else if (row.computedStatus === 'รอตอบแบบประเมิน') pending++;
-                else normal++;
-
-                if (row.followUps) {
-                    row.followUps.forEach(f => {
-                        if (f.status === 'COMPLETED' && f.completedAt) {
-                            const fDate = Utilities.formatDate(new Date(f.completedAt), "Asia/Bangkok", "yyyy-MM-dd");
-                            if (fDate === todayStr) fuToday++;
-                        }
-                    });
-                }
-                
-                drugCounts[row.drug] = (drugCounts[row.drug] || 0) + 1;
-            });
-            const responded = total - pending - overdue;
-            const responseRate = total > 0 ? Math.round((responded / total) * 100) : 0;
-
-            document.getElementById('statTotal').innerText = total;
-            document.getElementById('statResponseRate').innerText = responseRate + '%';
-            document.getElementById('statHighRisk').innerText = highRisk;
-            document.getElementById('statOverdue').innerText = overdue;
-            document.getElementById('statFUToday').innerText = fuToday;
-            document.getElementById('statsUpdatedAt').innerText = formatThaiDateTime(new Date());
-
-            const statusCtx = document.getElementById('statusChart');
-            if (statusChartInstance) statusChartInstance.destroy();
-            statusChartInstance = new Chart(statusCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['High Risk (รอ F/U)', 'ตอบช้า >24 ชม.', 'รอประเมิน', 'ปกติ / F/U แล้ว'],
-                    datasets: [{
-                        data: [highRisk, overdue, pending, normal],
-                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e'],
-                        borderWidth: 2, borderColor: '#fff'
-                    }]
-                },
-                options: { plugins: { legend: { position: 'bottom', labels: { font: { family: 'Sarabun' }, boxWidth: 12 } } }, cutout: '65%' }
-            });
-
-            const drugLabels = Object.keys(drugCounts);
-            const drugValues = drugLabels.map(l => drugCounts[l]);
-            const drugCtx = document.getElementById('drugChart');
-            if (drugChartInstance) drugChartInstance.destroy();
-            drugChartInstance = new Chart(drugCtx, {
-                type: 'bar',
-                data: {
-                    labels: drugLabels,
-                    datasets: [{ label: 'จำนวนผู้ป่วย', data: drugValues, backgroundColor: '#1e3a8a', borderRadius: 6, maxBarThickness: 60 }]
-                },
-                options: {
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Sarabun' } } }, x: { ticks: { font: { family: 'Sarabun' } } } }
-                }
-            });
-        }
-
         window.onload = () => { 
+            initLookerStudio();
             loadData().then(() => {
                 startAutoRefresh();
             }); 
