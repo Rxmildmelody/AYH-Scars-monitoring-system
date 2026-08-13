@@ -507,7 +507,7 @@
 
             if (hasTime) {
                 let hr = hour === '24' ? '00' : hour.padStart(2, '0');
-                return `${hr}.${minute} น.${dateStr}`;
+                return `${hr}.${minute} น. ${dateStr}`;
             } else {
                 return dateStr;
             }
@@ -554,102 +554,70 @@
             const target = parseDateBangkokJS(targetDateStr);
             const diffDays = Math.round((target - start) / (1000 * 60 * 60 * 24));
             const periodName = getFollowPeriodName(diffDays);
-            return `${periodName} •${toDDMMYYYY(target)}`;
+            return `${periodName} • ${toDDMMYYYY(target)}`;
         }
 
         // ------------------------------------------------------------------
-        // CORE: DYNAMIC OVERALL PATIENT STATUS & ROUND STATUS EVALUATION
+        // CORE: DYNAMIC INDEPENDENT ROUND STATUS & OVERALL
         // ------------------------------------------------------------------
-        function evaluateRoundStatuses(row) {
-            const drugStart = row.startDate || row.date;
-            const schedule = calculateAssessmentSchedule(drugStart);
+        function evaluatePatientRounds(patientRow, assessments) {
+            const schedule = calculateAssessmentSchedule(patientRow.startDate || patientRow.date);
             const rounds = ['Day 7', 'Day 14', 'Week 6'];
-            const assessments = row.assessments || [];
+            const sortedAssessments = assessments.slice().sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
             
-            // Map assessments ascending to allocate them to the earliest available schedule
-            const sorted = assessments.slice().sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
             const todayMidnight = parseDateBangkokJS(new Date());
             todayMidnight.setHours(0,0,0,0);
-            const todayTime = todayMidnight.getTime();
-
+            
+            let roundStatuses = {};
             let usedIndex = new Set();
-            let results = {};
 
             rounds.forEach((r, i) => {
                 const schDate = schedule[r].raw;
-                schDate.setHours(0,0,0,0);
-                const schTime = schDate.getTime();
-                
-                // หาว่ามี Assessment ที่ตรงรอบหรือไม่ โดยหา Assessment ที่ส่งเข้ามาก่อนรอบถัดไป
                 const nextSchDate = i < rounds.length - 1 ? schedule[rounds[i+1]].raw : new Date(8640000000000000);
-                nextSchDate.setHours(0,0,0,0);
-
-                let foundAsses = sorted.find((a, index) => {
+                
+                let foundAsses = sortedAssessments.find((a, index) => {
                     if (usedIndex.has(index)) return false;
                     let aDate = parseDateBangkokJS(a.timestamp);
-                    return aDate.getTime() < nextSchDate.getTime();
+                    return aDate < nextSchDate;
                 });
 
-                let statusText = '';
-                let isLate = false;
-                let riskClass = '';
-
                 if (foundAsses) {
-                    usedIndex.add(sorted.indexOf(foundAsses));
+                    usedIndex.add(sortedAssessments.indexOf(foundAsses));
                     const risk = (foundAsses.risk || "").toUpperCase();
-                    if (risk === "เสี่ยงสูง" || risk === "HIGH") {
-                        statusText = "เสี่ยงสูง";
-                        riskClass = "text-red-600 font-bold";
-                    } else {
-                        statusText = "ปกติ";
-                        riskClass = "text-green-600 font-bold";
-                    }
+                    roundStatuses[r] = { status: risk.includes("HIGH") || risk.includes("เสี่ยงสูง") ? "เสี่ยงสูง" : "ปกติ", result: foundAsses };
                 } else {
-                    if (todayTime > schTime) {
-                        statusText = "ตอบช้า >24 ชม.";
-                        isLate = true;
-                        riskClass = "text-orange-600 font-bold";
+                    if (todayMidnight.getTime() > schDate.getTime()) {
+                        roundStatuses[r] = { status: "ตอบช้า >24 ชม.", result: null };
                     } else {
-                        statusText = "รอแบบประเมิน";
-                        riskClass = "text-yellow-600 font-medium";
+                        roundStatuses[r] = { status: "รอแบบประเมิน", result: null };
                     }
                 }
-
-                results[r] = {
-                    dateStr: schedule[r].dateStr,
-                    status: statusText,
-                    isLate: isLate,
-                    riskClass: riskClass
-                };
             });
-            return results;
+            return roundStatuses;
         }
 
         function getPatientOverallStatus(row) {
             if (!row.startDate && !row.date) return "รอตอบแบบประเมิน";
-            const roundStats = evaluateRoundStatuses(row);
+            const statuses = evaluatePatientRounds(row, row.assessments || []);
             let hasHighRisk = false;
             let hasLate = false;
             let hasPending = false;
-
-            Object.values(roundStats).forEach(r => {
-                if (r.status === "เสี่ยงสูง") hasHighRisk = true;
-                if (r.isLate) hasLate = true;
-                if (r.status === "รอแบบประเมิน") hasPending = true;
+            
+            Object.values(statuses).forEach(s => {
+                if (s.status === 'เสี่ยงสูง') hasHighRisk = true;
+                else if (s.status === 'ตอบช้า >24 ชม.') hasLate = true;
+                else if (s.status === 'รอแบบประเมิน') hasPending = true;
             });
-
+            
             if (hasHighRisk) {
                 const fUps = row.followUps || [];
                 const hasPendingFu = fUps.some(f => f.status === 'PENDING' || f.status === 'IN_PROGRESS');
                 const hasCompletedFu = fUps.some(f => f.status === 'COMPLETED' && f.riskStatusSnapshot === 'HIGH');
-                if (hasPendingFu || !hasCompletedFu) {
-                    return "เสี่ยงสูง";
-                }
+                if (hasPendingFu || !hasCompletedFu) return "เสี่ยงสูง";
+                return "F/U แล้ว";
             }
             if (hasLate) return "ตอบช้า >24 ชม.";
             if (hasPending) return "รอตอบแบบประเมิน";
-            if (hasHighRisk) return "F/U แล้ว";
             return "ปกติ";
         }
 
@@ -781,15 +749,18 @@
                         const updatedRow = allPatientsData.find(p => p.hn === currentPatientRow.hn);
                         if (updatedRow) {
                             currentPatientRow = updatedRow;
+                            currentPatientRow.computedStatus = getPatientOverallStatus(updatedRow);
                             currentAssessmentHistory = getAssessmentHistory(updatedRow);
+                            
+                            const roundStats = evaluatePatientRounds(updatedRow, updatedRow.assessments || []);
+                            const schedule = calculateAssessmentSchedule(updatedRow.startDate || updatedRow.date);
+                            
+                            applyDisplayStylesForDate('dispDate7', schedule['Day 7'].raw, roundStats['Day 7'].status);
+                            applyDisplayStylesForDate('dispDate14', schedule['Day 14'].raw, roundStats['Day 14'].status);
+                            applyDisplayStylesForDate('dispDate42', schedule['Week 6'].raw, roundStats['Week 6'].status);
+
                             const statusElem = document.getElementById('detailStatus');
                             if(statusElem) statusElem.innerHTML = getStatusBadge(updatedRow.computedStatus);
-                            
-                            // Silent update for schedule UI boxes without breaking form
-                            const roundStats = evaluateRoundStatuses(currentPatientRow);
-                            document.getElementById('dispDate7').innerHTML = `${roundStats['Day 7'].dateStr}<br><span class="${roundStats['Day 7'].riskClass}">${roundStats['Day 7'].status}</span>`;
-                            document.getElementById('dispDate14').innerHTML = `${roundStats['Day 14'].dateStr}<br><span class="${roundStats['Day 14'].riskClass}">${roundStats['Day 14'].status}</span>`;
-                            document.getElementById('dispDate42').innerHTML = `${roundStats['Week 6'].dateStr}<br><span class="${roundStats['Week 6'].riskClass}">${roundStats['Week 6'].status}</span>`;
                         }
                     }
                 }
@@ -838,7 +809,7 @@
                 if (row.computedStatus === 'เสี่ยงสูง') highRisk++;
                 else if (row.computedStatus === 'ตอบช้า >24 ชม.') overdue++;
                 else if (row.computedStatus === 'รอตอบแบบประเมิน') pending++;
-                else normal++;
+                else normal++; 
 
                 if (row.followUps) {
                     row.followUps.forEach(f => {
@@ -941,6 +912,26 @@
         }
         function changePage(newPage) { currentPage = newPage; renderTable(); }
 
+        function applyDisplayStylesForDate(elementId, targetDateRaw, roundStatusText) {
+            const el = document.getElementById(elementId);
+            if (!targetDateRaw) return;
+            const dateStr = formatThaiDateTime(targetDateRaw, true);
+
+            let statusHtml = '';
+            if (roundStatusText === 'ตอบช้า >24 ชม.') {
+                el.className = "font-medium text-xs text-red-600";
+                statusHtml = `<br><span class="text-[10px] font-bold text-red-500">${roundStatusText}</span>`;
+            } else if (roundStatusText === 'รอแบบประเมิน') {
+                el.className = "font-medium text-xs text-yellow-600";
+                statusHtml = `<br><span class="text-[10px] font-bold text-yellow-600">${roundStatusText}</span>`;
+            } else {
+                const colorClass = roundStatusText === 'เสี่ยงสูง' ? "text-red-600" : "text-green-600";
+                el.className = `font-medium text-xs ${colorClass}`;
+                statusHtml = `<br><span class="text-[10px] font-bold ${colorClass}">${roundStatusText}</span>`;
+            }
+            el.innerHTML = `${dateStr}${statusHtml}`;
+        }
+
         function checkHighRiskActionRequired() {
             const fUps = currentPatientRow.followUps || [];
             
@@ -1002,12 +993,12 @@
             const fullLiffUrl = encodeURIComponent(LIFF_URL_BASE + data.hn);
             document.getElementById('detailQR').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${fullLiffUrl}`;
 
-            const roundStats = evaluateRoundStatuses(data);
+            const schedule = calculateAssessmentSchedule(data.startDate || data.date);
+            const roundStats = evaluatePatientRounds(data, data.assessments || []);
             
-            // แทรก Status ของแต่ละรอบลงในกล่อง UI เดิม (ไม่กระทบดีไซน์หลัก)
-            document.getElementById('dispDate7').innerHTML = `${roundStats['Day 7'].dateStr}<br><span class="${roundStats['Day 7'].riskClass}">${roundStats['Day 7'].status}</span>`;
-            document.getElementById('dispDate14').innerHTML = `${roundStats['Day 14'].dateStr}<br><span class="${roundStats['Day 14'].riskClass}">${roundStats['Day 14'].status}</span>`;
-            document.getElementById('dispDate42').innerHTML = `${roundStats['Week 6'].dateStr}<br><span class="${roundStats['Week 6'].riskClass}">${roundStats['Week 6'].status}</span>`;
+            applyDisplayStylesForDate('dispDate7', schedule['Day 7'].raw, roundStats['Day 7'].status);
+            applyDisplayStylesForDate('dispDate14', schedule['Day 14'].raw, roundStats['Day 14'].status);
+            applyDisplayStylesForDate('dispDate42', schedule['Week 6'].raw, roundStats['Week 6'].status);
 
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -1095,7 +1086,7 @@
                 } else {
                     imageHtml = `<p class="text-xs text-slate-400 mt-2"><i class="fa-regular fa-image mr-1"></i>ไม่มีรูปภาพแนบ (ไม่บังคับ)</p>`;
                 }
-                return `<div class="p-3 border border-purple-200 rounded-lg mb-3 bg-purple-50 shadow-sm fade-in"><p class="text-sm font-bold text-purple-700"><i class="fa-solid fa-comment-medical mr-1"></i> อาการเพิ่มเติมที่ผู้ป่วยระบุเอง</p><p class="text-sm text-purple-800 mt-1">${customText ? customText : '(ไม่ได้ระบุรายละเอียด)'}</p>${imageHtml}</div>`;
+                return `<div class="p-3 border border-purple-200 rounded-lg mb-3 bg-purple-50 shadow-sm fade-in"><p class="text-sm font-bold text-purple-700"><i class="fa-solid fa-comment-medical mr-1"></i> อา อาการเพิ่มเติมที่ผู้ป่วยระบุเอง</p><p class="text-sm text-purple-800 mt-1">${customText ? customText : '(ไม่ได้ระบุรายละเอียด)'}</p>${imageHtml}</div>`;
             };
 
             const assessmentContent = document.getElementById('assessmentContent');
@@ -1142,7 +1133,8 @@
                         <span class="font-bold ${n.followPeriodLabel.includes('High Risk') ? 'text-red-600' : 'text-slate-700'}">${n.followPeriodLabel}</span>
                         <span class="text-slate-400">${n.date}</span>
                     </div>
-                    <p class="text-slate-600"><i class="fa-solid fa-phone-volume text-slate-400 w-3 mr-1"></i>วิธีติดตาม: ${n.followMethodLabel}</p>${n.summary ? `<p class="text-slate-600 mt-1"><span class="font-medium">สรุป:</span> ${n.summary}</p>` : ''}
+                    <p class="text-slate-600"><i class="fa-solid fa-phone-volume text-slate-400 w-3 mr-1"></i>วิธีติดตาม: ${n.followMethodLabel}</p>
+                    ${n.summary ? `<p class="text-slate-600 mt-1"><span class="font-medium">สรุป:</span> ${n.summary}</p>` : ''}
                     ${n.recommendation ? `<p class="text-slate-600 mt-1"><span class="font-medium">คำแนะนำ:</span> ${n.recommendation}</p>` : ''}
                     <p class="text-slate-400 mt-1"><i class="fa-solid fa-user-pen w-3 mr-1"></i>${n.recorder || 'ไม่ระบุผู้บันทึก'}</p>
                 </div>
@@ -1220,7 +1212,7 @@
                     
                     if (!pharmacistNotesStore[hn]) pharmacistNotesStore[hn] = [];
                     pharmacistNotesStore[hn].push({
-                        date: formatThaiDateTime(new Date()), 
+                        date: formatThaiDateTime(new Date()),
                         followPeriodLabel: 'F/U High Risk', 
                         followMethodLabel: 'บันทึกการติดตาม',
                         summary: note, 
@@ -1256,7 +1248,7 @@
             const computedLabel = getFollowUpLabel(currentPatientRow.startDate || currentPatientRow.rawDate, followDateVal);
 
             const payloadNote = {
-                date: now.toLocaleString('th-TH'),
+                date: now.toLocaleString('th-TH'), // ต้นฉบับบันทึกลง Sheets
                 followPeriod: followDateVal, followPeriodLabel: computedLabel, 
                 followMethod: methodSelect.value === 'other' ? methodOther : methodSelect.value,
                 followMethodLabel: methodSelect.value === 'other' ? (methodOther || 'อื่นๆ') : methodSelect.options[methodSelect.selectedIndex].text,
@@ -1267,7 +1259,7 @@
 
             const uiNote = {
                 ...payloadNote,
-                date: formatThaiDateTime(now) 
+                date: formatThaiDateTime(now) // แสดงผลบนหน้าจอ Format ใหม่
             };
 
             const hn = currentPatientRow.hn;
@@ -1295,7 +1287,36 @@
             }, 2000);
         }
 
-        function printA5PDF() { /* ... */ }
+        function printA5PDF() {
+            const hn = document.getElementById('detailHN').innerText;
+            const name = document.getElementById('detailName').innerText;
+            const qrSrc = document.getElementById('detailQR').src;
+
+            const printWin = window.open('', '_blank');
+            printWin.document.write(`
+                <html><head><title>สมุดประจำตัวผู้ป่วย (PDF)</title>
+                <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+                    @page { size: A5 portrait; margin: 0; }
+                    body { font-family: 'Sarabun', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; background: #fff; }
+                    .container { border: 4px solid #1e3a8a; padding: 40px; border-radius: 16px; width: 80%; }
+                    h1 { color: #1e3a8a; font-size: 24px; margin-bottom: 5px; }
+                    p { font-size: 18px; color: #333; margin-top: 0; }
+                    img { width: 180px; height: 180px; margin: 20px 0; border: 2px solid #ccc; padding: 10px; border-radius: 10px; }
+                    .footer { font-size: 14px; color: #666; margin-top: 20px; }
+                </style></head>
+                <body><div class="container">
+                    <h1>สมุดประจำตัวผู้ป่วย</h1><p>เฝ้าระวังอาการแพ้ยารุนแรง (SCARs)</p>
+                    <hr style="border:1px solid #eee; width:80%; margin:20px auto;">
+                    <p><b>${name}</b><br><span style="font-size:16px">${hn}</span></p>
+                    <img src="${qrSrc}" alt="QR Code">
+                    <p class="footer">โปรดสแกน QR Code เพื่อทำแบบประเมิน</p>
+                </div>
+                <script>setTimeout(() => { window.print(); window.close(); }, 800);<\/script>
+                </body></html>
+            `);
+            printWin.document.close();
+        }
 
         async function submitForm(event) {
             event.preventDefault();
@@ -1329,6 +1350,7 @@
                     document.getElementById('addPatientForm').reset();
                     toggleTrackingChannel();
                     toggleModal('addPatientModal');
+                    
                     await loadData();
                 } else {
                     alert("ไม่สามารถบันทึกข้อมูลได้: " + (result.message || "เกิดข้อผิดพลาด"));
@@ -1408,7 +1430,7 @@
 
         window.onload = () => { 
             loadData().then(() => {
-                startAutoRefresh(); 
+                startAutoRefresh();
             }); 
             toggleOtherMethod(); 
             toggleTrackingChannel(); 
