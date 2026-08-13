@@ -421,7 +421,7 @@
         // 🌟 ตั้งค่า URL ส่วนสำคัญ 🌟
         const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwxZwMrptwaPyGSCCiYQzv8M0ejdtcC7b1PF5KfuU02HPtdPmfx20LUklIFqVYGnmNC/exec';
         const LIFF_URL_BASE = 'https://liff.line.me/2010995687-3szXwNXK?hn=';
-        const LOOKER_STUDIO_URL = "ใส่_LINK_GOOGLE_LOOKER_STUDIO_ตรงนี้"; // 🔴 เปลี่ยน URL ที่นี่เพื่อใช้งาน Looker Studio
+        const LOOKER_STUDIO_URL = "https://datastudio.google.com/embed/reporting/da91b4eb-4c3c-4b85-a5d8-c19525c8b778/page/dq35F"; // 🔴 เปลี่ยน URL ที่นี่เพื่อใช้งาน Looker Studio
 
         let allPatientsData = [];
         let filteredData = [];
@@ -615,7 +615,7 @@
             const iframe = document.getElementById('lookerIframe');
             const link = document.getElementById('lookerDirectLink');
             
-            if (LOOKER_STUDIO_URL && LOOKER_STUDIO_URL !== "ใส่_LINK_GOOGLE_LOOKER_STUDIO_ตรงนี้") {
+            if (LOOKER_STUDIO_URL && LOOKER_STUDIO_URL !== "https://datastudio.google.com/embed/reporting/da91b4eb-4c3c-4b85-a5d8-c19525c8b778/page/dq35F") {
                 iframe.src = LOOKER_STUDIO_URL;
                 link.href = LOOKER_STUDIO_URL;
             } else {
