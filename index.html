@@ -6,6 +6,7 @@
     <title>SCARs Monitoring System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; }
@@ -557,24 +558,16 @@
             const todayTime = todayDate.getTime();
             
             let roundStatuses = {};
-            let usedIndex = new Set();
 
             rounds.forEach((r, i) => {
                 const schDate = schedule[r].raw;
                 schDate.setHours(0,0,0,0);
                 const schTime = schDate.getTime();
                 
-                const nextSchDate = i < rounds.length - 1 ? schedule[rounds[i+1]].raw : new Date(8640000000000000);
-                nextSchDate.setHours(0,0,0,0);
-                
-                let foundAsses = sortedAssessments.find((a, index) => {
-                    if (usedIndex.has(index)) return false;
-                    let aDate = parseDateBangkokJS(a.timestamp);
-                    return aDate.getTime() < nextSchDate.getTime();
-                });
+                // หา Assessment ล่าสุดที่ระบุรอบและ Type เป็น SCHEDULED เท่านั้น
+                let foundAsses = sortedAssessments.slice().reverse().find(a => a.round === r && a.type === 'SCHEDULED');
 
                 if (foundAsses) {
-                    usedIndex.add(sortedAssessments.indexOf(foundAsses));
                     const risk = (foundAsses.risk || "").toUpperCase();
                     const isHighRisk = risk.includes("HIGH") || risk.includes("เสี่ยงสูง");
                     roundStatuses[r] = { status: isHighRisk ? "เสี่ยงสูง" : "ปกติ", result: foundAsses };
@@ -819,7 +812,7 @@
                 history = [{
                     date: row.assessRawDate || row.rawDate, label: 'ล่าสุด', timestamp: row.assessTimestamp || 'ไม่มีข้อมูล',
                     symp1: row.symp1, symp2: row.symp2, symp3: row.symp3, symp4: row.symp4, symp5: row.symp5 || null, symp5Text: row.symp5Text || '',
-                    photo2: row.photo2, photo3: row.photo3, photo4: row.photo4, photo5: row.photo5, viewed: true
+                    photo2: row.photo2, photo3: row.photo3, photo4: row.photo4, photo5: row.photo5, viewed: true, round: 'ADDITIONAL', type: 'ADDITIONAL'
                 }];
             }
             history.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -1054,7 +1047,13 @@
                 const opt = document.createElement('option');
                 opt.value = idx;
                 
-                const periodLabel = getFollowUpLabel(currentPatientRow.startDate || currentPatientRow.rawDate, entry.date);
+                let periodLabel = "";
+                if (entry.type === "SCHEDULED") {
+                    periodLabel = `${entry.round} • ${toDDMMYYYY(parseDateBangkokJS(entry.date))}`;
+                } else {
+                    periodLabel = `ประเมินเพิ่มเติม • ${formatThaiDateTime(entry.timestamp)}`;
+                }
+                
                 const unreadPrefix = entry.viewed === false ? '🔴 ' : '';
                 opt.innerText = `${unreadPrefix}${periodLabel}`;
                 
