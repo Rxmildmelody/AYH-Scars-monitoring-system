@@ -6,7 +6,6 @@
     <title>SCARs Monitoring System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; }
@@ -553,31 +552,40 @@
             const rounds = ['Day 7', 'Day 14', 'Week 6'];
             const sortedAssessments = assessments.slice().sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
             
-            const todayMidnight = parseDateBangkokJS(new Date());
-            todayMidnight.setHours(0,0,0,0);
+            const todayDate = parseDateBangkokJS(new Date());
+            todayDate.setHours(0,0,0,0);
+            const todayTime = todayDate.getTime();
             
             let roundStatuses = {};
             let usedIndex = new Set();
 
             rounds.forEach((r, i) => {
                 const schDate = schedule[r].raw;
+                schDate.setHours(0,0,0,0);
+                const schTime = schDate.getTime();
+                
                 const nextSchDate = i < rounds.length - 1 ? schedule[rounds[i+1]].raw : new Date(8640000000000000);
+                nextSchDate.setHours(0,0,0,0);
                 
                 let foundAsses = sortedAssessments.find((a, index) => {
                     if (usedIndex.has(index)) return false;
                     let aDate = parseDateBangkokJS(a.timestamp);
-                    return aDate < nextSchDate;
+                    return aDate.getTime() < nextSchDate.getTime();
                 });
 
                 if (foundAsses) {
                     usedIndex.add(sortedAssessments.indexOf(foundAsses));
                     const risk = (foundAsses.risk || "").toUpperCase();
-                    roundStatuses[r] = { status: risk.includes("HIGH") || risk.includes("เสี่ยงสูง") ? "เสี่ยงสูง" : "ปกติ", result: foundAsses };
+                    const isHighRisk = risk.includes("HIGH") || risk.includes("เสี่ยงสูง");
+                    roundStatuses[r] = { status: isHighRisk ? "เสี่ยงสูง" : "ปกติ", result: foundAsses };
                 } else {
-                    if (todayMidnight.getTime() > schDate.getTime()) {
+                    const diffDays = Math.round((schTime - todayTime) / (1000 * 60 * 60 * 24));
+                    if (diffDays < 0) { 
                         roundStatuses[r] = { status: "ตอบช้า >24 ชม.", result: null };
-                    } else {
+                    } else if (diffDays <= 1) { 
                         roundStatuses[r] = { status: "รอแบบประเมิน", result: null };
+                    } else { 
+                        roundStatuses[r] = { status: "ยังไม่ถึงกำหนด", result: null };
                     }
                 }
             });
@@ -590,11 +598,15 @@
             let hasHighRisk = false;
             let hasLate = false;
             let hasPending = false;
+            let hasFuture = false;
+            let hasNormal = false;
             
             Object.values(statuses).forEach(s => {
                 if (s.status === 'เสี่ยงสูง') hasHighRisk = true;
                 else if (s.status === 'ตอบช้า >24 ชม.') hasLate = true;
                 else if (s.status === 'รอแบบประเมิน') hasPending = true;
+                else if (s.status === 'ยังไม่ถึงกำหนด') hasFuture = true;
+                else if (s.status === 'ปกติ') hasNormal = true;
             });
             
             if (hasHighRisk) {
@@ -606,7 +618,8 @@
             }
             if (hasLate) return "ตอบช้า >24 ชม.";
             if (hasPending) return "รอตอบแบบประเมิน";
-            return "ปกติ";
+            if (hasNormal) return "ปกติ";
+            return "ลงทะเบียนแล้ว"; 
         }
 
         // ------------------------------------------------------------------
@@ -711,6 +724,7 @@
             if (status === 'F/U แล้ว') return '<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-200 shadow-sm"><i class="fa-solid fa-check-circle mr-1"></i>F/U แล้ว</span>';
             if (status === 'ปกติ' || status === 'ลงทะเบียนแล้ว') return '<span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-solid fa-check mr-1"></i>ปกติ</span>';
             if (status === 'รอตอบแบบประเมิน') return '<span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-regular fa-clock mr-1"></i>รอประเมิน</span>';
+            if (status === 'ยังไม่ถึงกำหนด') return '<span class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-semibold"><i class="fa-regular fa-calendar mr-1"></i>ยังไม่ถึงกำหนด</span>';
             return `<span class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold">${status}</span>`;
         }
 
@@ -920,10 +934,14 @@
             } else if (roundStatusText === 'รอแบบประเมิน') {
                 el.className = "font-medium text-xs text-yellow-600";
                 statusHtml = `<br><span class="text-[10px] font-bold text-yellow-600">${roundStatusText}</span>`;
+            } else if (roundStatusText === 'ยังไม่ถึงกำหนด') {
+                el.className = "font-medium text-xs text-slate-400";
+                statusHtml = `<br><span class="text-[10px] font-bold text-slate-400">${roundStatusText}</span>`;
             } else {
                 const colorClass = roundStatusText === 'เสี่ยงสูง' ? "text-red-600" : "text-green-600";
+                const textDisplay = roundStatusText === 'เสี่ยงสูง' ? 'High Risk' : 'ปกติ';
                 el.className = `font-medium text-xs ${colorClass}`;
-                statusHtml = `<br><span class="text-[10px] font-bold ${colorClass}">${roundStatusText}</span>`;
+                statusHtml = `<br><span class="text-[10px] font-bold ${colorClass}">${textDisplay}</span>`;
             }
             el.innerHTML = `${dateStr}${statusHtml}`;
         }
