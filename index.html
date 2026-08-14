@@ -147,14 +147,10 @@
             <!-- ============ LOOKER STUDIO STATISTICS VIEW ============ -->
             <div id="view-stats" class="view-section min-h-[600px] h-[calc(100vh-140px)]">
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm w-full h-full flex flex-col overflow-hidden relative">
-                    
-                    <!-- Loading State -->
                     <div id="lookerLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-white z-10">
                         <i class="fa-solid fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i>
                         <p class="text-slate-500 font-medium">กำลังโหลดข้อมูลสถิติ...</p>
                     </div>
-
-                    <!-- Error State (If URL is not set) -->
                     <div id="lookerError" class="absolute inset-0 hidden flex-col items-center justify-center bg-white z-20">
                         <i class="fa-solid fa-chart-bar text-4xl mb-4 text-slate-300"></i>
                         <p class="text-slate-500 font-medium mb-4" id="lookerErrorMsg">ไม่สามารถโหลดข้อมูลสถิติได้ กรุณาตรวจสอบการเชื่อมต่อหรือสิทธิ์การเข้าถึง Google Looker Studio</p>
@@ -162,10 +158,7 @@
                             <i class="fa-solid fa-external-link-alt"></i> เปิด Google Looker Studio
                         </a>
                     </div>
-
-                    <!-- Looker Studio iframe -->
                     <iframe id="lookerIframe" class="w-full h-full border-0 hidden" src="" onload="hideLookerLoading()" allowfullscreen></iframe>
-                
                 </div>
             </div>
 
@@ -174,6 +167,7 @@
 
     <!-- Modal: ลงทะเบียนผู้ป่วยใหม่ -->
     <div id="addPatientModal" class="fixed inset-0 modal-bg hidden flex items-center justify-center z-50 p-4">
+        <!-- โค้ด Modal ยึดตามเดิม -->
         <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden">
             <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-[#1e3a8a] to-blue-700">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2"><i class="fa-solid fa-notes-medical"></i>ลงทะเบียนผู้ป่วยใหม่</h3>
@@ -249,7 +243,6 @@
             </div>
 
             <div class="p-6 flex-1 overflow-y-auto grid grid-cols-12 gap-6 bg-slate-100/50">
-
                 <!-- คอลัมน์ 1: ข้อมูลทั่วไป & QR -->
                 <div class="col-span-3 space-y-4">
                     <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
@@ -279,7 +272,7 @@
                     </div>
                 </div>
 
-                <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ และ กำหนดการติดตามอาการ -->
+                <!-- คอลัมน์ 2: ผลการประเมินจากคนไข้ -->
                 <div class="col-span-5 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
                     <div class="flex items-center justify-between border-b pb-3 mb-4">
                         <h4 class="font-bold text-slate-800 flex items-center gap-2">
@@ -290,7 +283,6 @@
                         </div>
                     </div>
 
-                    <!-- กำหนดการติดตามอาการ -->
                     <div class="mb-4">
                         <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-regular fa-calendar text-blue-500"></i> กำหนดการติดตามอาการ</p>
                         <div class="flex text-center text-xs gap-2">
@@ -306,27 +298,22 @@
                         </div>
                     </div>
 
-                    <!-- เลือกดูตามวันที่ -->
                     <div class="mb-4">
                         <label class="text-xs font-bold text-slate-500 mb-1 block uppercase"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> เลือกช่วงติดตามเพื่อดูผล</label>
                         <select id="assessmentDateSelect" onchange="onAssessmentDateSelect()" class="w-full p-2 border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white text-sm font-medium"></select>
                     </div>
 
-                    <!-- เวลาบันทึก/ประเมิน -->
                     <div class="mb-4 space-y-1 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs shadow-inner">
                         <p class="flex justify-between text-slate-600"><span class="font-semibold"><i class="fa-solid fa-notes-medical text-slate-400 w-4"></i> ลงทะเบียน:</span> <span id="timeRegister">-</span></p>
                         <p class="flex justify-between text-slate-600"><span class="font-semibold"><i class="fa-solid fa-check-double text-slate-400 w-4"></i> ผู้ป่วยตอบประเมิน:</span> <span id="timeAssess" class="font-bold text-blue-700">-</span></p>
                     </div>
 
-                    <!-- พื้นที่แสดงอาการที่ติ๊ก -->
                     <div id="assessmentContent" class="flex-1 overflow-y-auto pr-2 custom-scrollbar border-t border-slate-100 pt-3">
-                        <!-- ถูกสร้างโดย JS -->
                     </div>
                 </div>
 
                 <!-- คอลัมน์ 3: ฟอร์มติดตามสำหรับเภสัชกร -->
                 <div class="col-span-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col relative">
-                    
                     <!-- 🔴 แสดงเมื่อ High Risk และยังไม่ F/U -->
                     <div id="highRiskActionBox" class="hidden mb-4 p-4 border-2 border-red-400 bg-red-50 rounded-xl shadow-sm">
                         <h4 class="font-bold text-red-700 mb-2"><i class="fa-solid fa-triangle-exclamation"></i> เคสประเมินความเสี่ยงสูง (High Risk)</h4>
@@ -336,7 +323,7 @@
                         </button>
                     </div>
 
-                    <!-- 🔴 ฟอร์มกรอกข้อมูล F/U (เปิดเมื่อกดปุ่ม) -->
+                    <!-- 🔴 ฟอร์มกรอกข้อมูล F/U -->
                     <div id="highRiskFormContainer" class="hidden mb-4 p-4 border-2 border-red-400 bg-white rounded-xl shadow-sm">
                         <h4 class="font-bold text-red-700 mb-3 border-b border-red-100 pb-2"><i class="fa-solid fa-clipboard-check"></i> บันทึก F/U เคส High Risk</h4>
                         <div class="space-y-3 text-sm">
@@ -345,7 +332,7 @@
                                 <input type="date" id="fuDate" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-red-500 bg-red-50 font-semibold text-red-800">
                             </div>
                             <div>
-                                <label class="block text-slate-700 font-bold mb-1">หมายเหตุ / บันทึกการติดตาม (Optional)</label>
+                                <label class="block text-slate-700 font-bold mb-1">หมายเหตุ / บันทึกการติดตาม</label>
                                 <textarea id="fuNote" rows="3" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-red-500 resize-none" placeholder="เช่น โทรติดตามผู้ป่วยแล้ว ผู้ป่วยไม่มีอาการเพิ่มเติม..."></textarea>
                             </div>
                             <div class="flex gap-2 pt-2">
@@ -355,7 +342,7 @@
                         </div>
                     </div>
 
-                    <!-- 🟢 แสดงเมื่อ F/U แล้ว (ดึงข้อมูลจาก Backend) -->
+                    <!-- 🟢 แสดงเมื่อ F/U แล้ว -->
                     <div id="highRiskCompletedBox" class="hidden mb-4 p-4 border-2 border-green-400 bg-green-50 rounded-xl shadow-sm fade-in">
                         <h4 class="font-bold text-green-700 mb-2"><i class="fa-solid fa-check-circle"></i> ติดตามเคส High Risk แล้ว (F/U แล้ว)</h4>
                         <div class="text-sm text-green-800 space-y-1">
@@ -369,6 +356,7 @@
                     </h4>
 
                     <form id="pharmacistNoteForm" class="space-y-4 text-sm">
+                        <!-- โค้ด form เดิม -->
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-slate-600 mb-1 font-medium">วันที่บันทึกทั่วไป</label>
@@ -408,7 +396,7 @@
                         </div>
                     </form>
 
-                    <!-- ประวัติการบันทึกของเภสัชกร (ย้อนหลัง) -->
+                    <!-- ประวัติการบันทึก -->
                     <div class="mt-4 pt-4 border-t border-slate-100">
                         <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-solid fa-list-check text-blue-500"></i> ประวัติการติดตามที่บันทึกไว้</p>
                         <div id="pharmacistNoteHistory" class="space-y-2 max-h-56 overflow-y-auto pr-1 text-xs"></div>
@@ -419,7 +407,6 @@
     </div>
 
     <script>
-        // 🌟 ตั้งค่า URL ส่วนสำคัญ 🌟
         const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwxZwMrptwaPyGSCCiYQzv8M0ejdtcC7b1PF5KfuU02HPtdPmfx20LUklIFqVYGnmNC/exec';
         const LIFF_URL_BASE = 'https://liff.line.me/2010995687-3szXwNXK?hn=';
         const LOOKER_STUDIO_URL = "https://datastudio.google.com/embed/reporting/da91b4eb-4c3c-4b85-a5d8-c19525c8b778/page/dq35F";
@@ -523,10 +510,6 @@
             return formatThaiDateTime(rawDateStr);
         }
 
-        function formatDateString(dateStr) {
-            return formatThaiDateTime(dateStr, true);
-        }
-
         function getFollowPeriodName(diffDays) {
             if (diffDays <= 1) return "Day 1";
             if (diffDays === 7) return "Day 7";
@@ -564,7 +547,6 @@
                 schDate.setHours(0,0,0,0);
                 const schTime = schDate.getTime();
                 
-                // หา Assessment ล่าสุดที่ระบุรอบและ Type เป็น SCHEDULED เท่านั้น
                 let foundAsses = sortedAssessments.slice().reverse().find(a => a.round === r && a.type === 'SCHEDULED');
 
                 if (foundAsses) {
@@ -588,27 +570,29 @@
         function getPatientOverallStatus(row) {
             if (!row.startDate && !row.date) return "รอตอบแบบประเมิน";
             const statuses = evaluatePatientRounds(row, row.assessments || []);
-            let hasHighRisk = false;
+            const allAssessments = row.assessments || [];
+            
+            // 📍 FIX REGRESSION: ตรวจสอบแบบประเมิน "ทุกรอบ" (รวมถึง Additional) เพื่อหาสถานะเสี่ยงสูง
+            const hasAnyHighRisk = allAssessments.some(a => (a.risk || "").toUpperCase().includes("HIGH") || (a.risk || "").includes("เสี่ยงสูง"));
+            
+            const fUps = row.followUps || [];
+            const hasPendingFu = fUps.some(f => f.status === 'PENDING' || f.status === 'IN_PROGRESS');
+            const hasCompletedFu = fUps.some(f => f.status === 'COMPLETED' && f.riskStatusSnapshot === 'HIGH');
+            
+            if (hasPendingFu) return "เสี่ยงสูง";
+            if (hasAnyHighRisk && !hasCompletedFu) return "เสี่ยงสูง";
+            if (hasAnyHighRisk && hasCompletedFu) return "F/U แล้ว"; // ห้ามหายไปหลัง Refresh
+
             let hasLate = false;
             let hasPending = false;
-            let hasFuture = false;
             let hasNormal = false;
             
             Object.values(statuses).forEach(s => {
-                if (s.status === 'เสี่ยงสูง') hasHighRisk = true;
-                else if (s.status === 'ตอบช้า >24 ชม.') hasLate = true;
+                if (s.status === 'ตอบช้า >24 ชม.') hasLate = true;
                 else if (s.status === 'รอแบบประเมิน') hasPending = true;
-                else if (s.status === 'ยังไม่ถึงกำหนด') hasFuture = true;
                 else if (s.status === 'ปกติ') hasNormal = true;
             });
             
-            if (hasHighRisk) {
-                const fUps = row.followUps || [];
-                const hasPendingFu = fUps.some(f => f.status === 'PENDING' || f.status === 'IN_PROGRESS');
-                const hasCompletedFu = fUps.some(f => f.status === 'COMPLETED' && f.riskStatusSnapshot === 'HIGH');
-                if (hasPendingFu || !hasCompletedFu) return "เสี่ยงสูง";
-                return "F/U แล้ว";
-            }
             if (hasLate) return "ตอบช้า >24 ชม.";
             if (hasPending) return "รอตอบแบบประเมิน";
             if (hasNormal) return "ปกติ";
@@ -784,6 +768,8 @@
 
                             const statusElem = document.getElementById('detailStatus');
                             if(statusElem) statusElem.innerHTML = getStatusBadge(updatedRow.computedStatus);
+                            
+                            checkHighRiskActionRequired();
                         }
                     }
                 }
@@ -939,6 +925,7 @@
             el.innerHTML = `${dateStr}${statusHtml}`;
         }
 
+        // 📍 FIX REGRESSION: แก้ Logic ให้ F/U Panel ไม่หายไป
         function checkHighRiskActionRequired() {
             const fUps = currentPatientRow.followUps || [];
             
@@ -1218,6 +1205,7 @@
                         });
                     }
                     
+                    // อัปเดต State ล่าสุดทันที
                     currentPatientRow.computedStatus = getPatientOverallStatus(currentPatientRow);
 
                     checkHighRiskActionRequired();
