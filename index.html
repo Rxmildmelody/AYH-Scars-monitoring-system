@@ -1152,7 +1152,23 @@
 
                 if (document.getElementById('dashboardApp').style.display === 'none') showDashboardApp();
 
-                newData = newData.map(row => { row.computedStatus = getPatientOverallStatus(row); return row; });
+                newData = newData.map(row => { 
+                    row.computedStatus = getPatientOverallStatus(row); 
+                    
+                    // --- FIX: Format Patient Name Display ---
+                    const prefix = (row.prefix || "").trim();
+                    const firstName = (row.firstName || "").trim();
+                    const lastName = (row.lastName || "").trim();
+                    
+                    // Construct base name (fallback to existing row.name for old legacy records)
+                    const baseName = (firstName || lastName) ? `${firstName} ${lastName}`.trim() : (row.name || "").trim();
+                    
+                    // Set displayName = prefix + firstName + lastName. Avoids extra spaces if prefix is empty.
+                    row.name = prefix ? `${prefix} ${baseName}` : baseName;
+                    // ----------------------------------------
+                    
+                    return row; 
+                });
 
                 if(JSON.stringify(newData) !== JSON.stringify(allPatientsData)) {
                     allPatientsData = newData;
