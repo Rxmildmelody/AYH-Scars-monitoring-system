@@ -421,14 +421,11 @@
                     <div class="mb-4">
                         <p class="text-xs font-bold text-slate-500 mb-2 uppercase"><i class="fa-regular fa-calendar text-blue-500"></i> กำหนดการติดตามอาการ</p>
                         <div class="flex text-center text-xs gap-2">
+                            <div id="displayTab1" class="flex-1 py-2 rounded-lg border border-slate-200 bg-white">
+                                <p class="font-bold text-slate-700">วันที่ 1</p><span id="dispDate1" class="font-medium text-slate-600"></span>
+                            </div>
                             <div id="displayTab7" class="flex-1 py-2 rounded-lg border border-slate-200 bg-white">
-                                <p class="font-bold text-slate-700">Day 7</p><span id="dispDate7" class="font-medium text-slate-600"></span>
-                            </div>
-                            <div id="displayTab14" class="flex-1 py-2 rounded-lg border border-slate-200 bg-white">
-                                <p class="font-bold text-slate-700">Day 14</p><span id="dispDate14" class="font-medium text-slate-600"></span>
-                            </div>
-                            <div id="displayTab42" class="flex-1 py-2 rounded-lg border border-slate-200 bg-white">
-                                <p class="font-bold text-slate-700">Week 6</p><span id="dispDate42" class="font-medium text-slate-600"></span>
+                                <p class="font-bold text-slate-700">วันที่ 7</p><span id="dispDate7" class="font-medium text-slate-600"></span>
                             </div>
                         </div>
                     </div>
@@ -921,26 +918,32 @@
 
         function calculateAssessmentSchedule(drugStartDate) {
             const start = parseDateBangkokJS(drugStartDate);
-            const day7Date = new Date(start); day7Date.setDate(day7Date.getDate() + 7);
-            const day14Date = new Date(start); day14Date.setDate(day14Date.getDate() + 14);
-            const week6Date = new Date(start); week6Date.setDate(week6Date.getDate() + 42);
+            // Day 1 = the SAME calendar date as the medication start date (NOT start + 1 day)
+            const day1Date = new Date(start);
+            // Day 7 = medication start date + 6 calendar days
+            const day7Date = new Date(start); day7Date.setDate(day7Date.getDate() + 6);
             return {
-                "Day 7": { raw: day7Date, dateStr: formatThaiDateTime(day7Date, true) },
-                "Day 14": { raw: day14Date, dateStr: formatThaiDateTime(day14Date, true) },
-                "Week 6": { raw: week6Date, dateStr: formatThaiDateTime(week6Date, true) }
+                "Day 1": { raw: day1Date, dateStr: formatThaiDateTime(day1Date, true) },
+                "Day 7": { raw: day7Date, dateStr: formatThaiDateTime(day7Date, true) }
             };
+        }
+
+        // Internal round keys stay as "Day 1" / "Day 7" (used for matching/storage);
+        // this maps them to the Thai labels shown to pharmacists and patients.
+        function getThaiRoundLabel(round) {
+            if (round === 'Day 1') return 'วันที่ 1';
+            if (round === 'Day 7') return 'วันที่ 7';
+            return round;
         }
 
         function toDDMMYYYY(dateObj) { return formatThaiDateTime(dateObj, true); }
         function formatDateTimeFull(rawDateStr) { return formatThaiDateTime(rawDateStr); }
 
         function getFollowPeriodName(diffDays) {
-            if (diffDays <= 1) return "Day 1";
-            if (diffDays === 7) return "Day 7";
-            if (diffDays === 14) return "Day 14";
-            if (diffDays === 42) return "Week 6";
             if (diffDays < 0) return "ก่อนเริ่มยา";
-            return `Day ${diffDays}`;
+            if (diffDays === 0) return "วันที่ 1";
+            if (diffDays === 6) return "วันที่ 7";
+            return `วันที่ ${diffDays + 1}`;
         }
 
         function getFollowUpLabel(startDateStr, targetDateStr) {
@@ -953,7 +956,7 @@
 
         function evaluatePatientRounds(patientRow, assessments) {
             const schedule = calculateAssessmentSchedule(patientRow.startDate || patientRow.date);
-            const rounds = ['Day 7', 'Day 14', 'Week 6'];
+            const rounds = ['Day 1', 'Day 7'];
             const sortedAssessments = assessments.slice().sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
             const todayDate = parseDateBangkokJS(new Date());
             todayDate.setHours(0,0,0,0);
@@ -1173,9 +1176,8 @@
                             const roundStats = evaluatePatientRounds(updatedRow, updatedRow.assessments || []);
                             const schedule = calculateAssessmentSchedule(updatedRow.startDate || updatedRow.date);
                             
+                            applyDisplayStylesForDate('dispDate1', schedule['Day 1'].raw, roundStats['Day 1'].status);
                             applyDisplayStylesForDate('dispDate7', schedule['Day 7'].raw, roundStats['Day 7'].status);
-                            applyDisplayStylesForDate('dispDate14', schedule['Day 14'].raw, roundStats['Day 14'].status);
-                            applyDisplayStylesForDate('dispDate42', schedule['Week 6'].raw, roundStats['Week 6'].status);
 
                             const statusElem = document.getElementById('detailStatus');
                             if(statusElem) statusElem.innerHTML = getStatusBadge(updatedRow.computedStatus);
@@ -1431,9 +1433,8 @@
             const schedule = calculateAssessmentSchedule(data.startDate || data.date);
             const roundStats = evaluatePatientRounds(data, data.assessments || []);
             
+            applyDisplayStylesForDate('dispDate1', schedule['Day 1'].raw, roundStats['Day 1'].status);
             applyDisplayStylesForDate('dispDate7', schedule['Day 7'].raw, roundStats['Day 7'].status);
-            applyDisplayStylesForDate('dispDate14', schedule['Day 14'].raw, roundStats['Day 14'].status);
-            applyDisplayStylesForDate('dispDate42', schedule['Week 6'].raw, roundStats['Week 6'].status);
 
             const today = new Date();
             const yyyy = today.getFullYear(); const mm = String(today.getMonth() + 1).padStart(2, '0'); const dd = String(today.getDate()).padStart(2, '0');
@@ -1469,7 +1470,7 @@
             currentAssessmentHistory.forEach((entry, idx) => {
                 const opt = document.createElement('option');
                 opt.value = idx;
-                let periodLabel = entry.type === "SCHEDULED" ? `${entry.round} • ${toDDMMYYYY(parseDateBangkokJS(entry.date))}` : `ประเมินเพิ่มเติม • ${formatThaiDateTime(entry.timestamp)}`;
+                let periodLabel = entry.type === "SCHEDULED" ? `${getThaiRoundLabel(entry.round)} • ${toDDMMYYYY(parseDateBangkokJS(entry.date))}` : `ประเมินเพิ่มเติม • ${formatThaiDateTime(entry.timestamp)}`;
                 const unreadPrefix = entry.viewed === false ? '🔴 ' : '';
                 opt.innerText = `${unreadPrefix}${periodLabel}`;
                 if (entry.viewed === false) opt.classList.add('unread-opt');
@@ -1652,9 +1653,8 @@
             const allergyStr = currentPatientRow.history && currentPatientRow.history !== "-" ? currentPatientRow.history : "ไม่มีประวัติแพ้ยา";
 
             const schedule = calculateAssessmentSchedule(startDateRaw);
+            const day1 = schedule['Day 1'] ? formatThaiDateTime(schedule['Day 1'].raw, true) : "-";
             const day7 = schedule['Day 7'] ? formatThaiDateTime(schedule['Day 7'].raw, true) : "-";
-            const day14 = schedule['Day 14'] ? formatThaiDateTime(schedule['Day 14'].raw, true) : "-";
-            const week6 = schedule['Week 6'] ? formatThaiDateTime(schedule['Week 6'].raw, true) : "-";
 
             const printWin = window.open('', '_blank');
             printWin.document.write(`
@@ -1688,9 +1688,8 @@
                     
                     <div class="schedule-box">
                         <p style="text-align:center; margin-bottom:10px;"><b>กำหนดการติดตามอาการ</b></p>
-                        <p>Day 7 &nbsp;&nbsp;—&nbsp;&nbsp; ${day7}</p>
-                        <p>Day 14 &nbsp;—&nbsp;&nbsp; ${day14}</p>
-                        <p>Week 6 —&nbsp;&nbsp; ${week6}</p>
+                        <p>วันที่ 1 &nbsp;—&nbsp;&nbsp; ${day1}</p>
+                        <p>วันที่ 7 &nbsp;—&nbsp;&nbsp; ${day7}</p>
                     </div>
                     
                     <img id="qrImg" src="${qrSrc}" alt="QR Code">
